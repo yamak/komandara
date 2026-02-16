@@ -1,0 +1,69 @@
+---
+alwaysApply: true
+---
+
+---
+description: Komandara Project Architecture, Roadmap, and Reference Specifications
+globs: *
+---
+
+# Project Scope: Komandara K10 (Current Focus)
+**This project is strictly for the K10 core. Do NOT implement features from K20/K40 yet.**
+
+## 📚 Reference Specifications (The "Ground Truth")
+**All design logic MUST strictly adhere to the documents located in the `spec/` folder.**
+If there is a conflict between common knowledge and these documents, **the documents in `spec/` prevail.**
+
+### 1. Unprivileged ISA (Instruction Set)
+- **File Path:** `spec/riscv-spec-20191213.txt`
+- **Target String:** `RV32IMAC_Zicsr_Zifencei`
+- **Directives:**
+  - Implement Base Integer (I), Multiply (M), Atomic (A), Compressed (C).
+  - CSRs (`Zicsr`) and Fence.i (`Zifencei`) are separate extensions.
+
+### 2. Privileged Architecture (System)
+- **File Path:** `spec/riscv-privileged-20211203.txt`
+- **Directives:**
+  - **Mode:** Machine Mode (M) + User Mode (U) ONLY.
+  - **Trap Handling:** Strictly follow Section 3.1 (Machine-Level ISA).
+  - **PMP:** Implement Physical Memory Protection (Section 3.7).
+
+---
+
+## 🏗️ K10 Architecture Constraints
+- **Pipeline:** 5-Stage Classic (In-Order).
+- **Memory Model:** **Physical Addressing ONLY.**
+  - **NO MMU:** Do not implement Sv32 logic, SATP register, or TLBs.
+  - **Protection:** Use PMP logic defined in the Privileged Spec.
+- **Target OS:** RTOS (FreeRTOS, Zephyr) or Bare-metal.
+
+## 🗺️ Roadmap (For Context Only)
+- **K20 (Next Step):** Adds Sv32 MMU + Supervisor Mode (S) -> Capable of booting Linux.
+- **K40:** Dual Core + L1 Cache Coherence (MESI) + Atomic Instructions.
+- **K61:** Out-of-Order Execution + Superscalar.
+
+# Philosophy: "Vibe Coding"
+- **Clean Code:** Prioritize readability and maintainability over clever hacks.
+- **Modularity:** Keep modules small and focused. Use SystemVerilog interfaces for internal buses.
+- **Parametric:** Design infrastructure modules (Arbiter, FIFO, Crossbar) to be generic and reusable for future K20/K40 versions.
+- **Golden Rule:** **Do NOT invent custom instructions or CSRs.** Stick to the ratified specs in the `spec/` folder.
+
+# License & Copyright
+- **License:** Apache License 2.0. See [LICENSE](mdc:LICENSE).
+- **Copyright Header:** Every source file (`.sv`, `.svh`, `.v`, `.pkg`) MUST begin with the following Apache 2.0 copyright notice **before any other content**:
+```
+// Copyright 2025 The Komandara Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+```
+- **Rule:** When creating a new file, ALWAYS include this header as the very first lines.

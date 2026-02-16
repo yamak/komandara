@@ -1,0 +1,84 @@
+CAPI=2:
+name: komandara:core:k10:0.1.0
+description: >
+  Komandara K10 — 5-stage in-order RV32IMAC_Zicsr_Zifencei core + SoC top.
+
+filesets:
+  rtl:
+    files:
+      - komandara_k10_pkg.sv:          {file_type: systemVerilogSource}
+      - k10_regfile.sv:                {file_type: systemVerilogSource}
+      - k10_alu.sv:                    {file_type: systemVerilogSource}
+      - k10_imm_gen.sv:                {file_type: systemVerilogSource}
+      - k10_compressed_decoder.sv:     {file_type: systemVerilogSource}
+      - k10_mul_div.sv:                {file_type: systemVerilogSource}
+      - k10_fetch.sv:                  {file_type: systemVerilogSource}
+      - k10_decode.sv:                 {file_type: systemVerilogSource}
+      - k10_execute.sv:                {file_type: systemVerilogSource}
+      - k10_lsu.sv:                    {file_type: systemVerilogSource}
+      - k10_memory.sv:                 {file_type: systemVerilogSource}
+      - k10_writeback.sv:              {file_type: systemVerilogSource}
+      - k10_hazard_unit.sv:            {file_type: systemVerilogSource}
+      - k10_csr.sv:                    {file_type: systemVerilogSource}
+      - k10_pmp.sv:                    {file_type: systemVerilogSource}
+      - k10_tracer.sv:                 {file_type: systemVerilogSource}
+      - k10_core.sv:                   {file_type: systemVerilogSource}
+      - k10_top.sv:                    {file_type: systemVerilogSource}
+    depend:
+      - komandara:ip:common
+      - komandara:ip:axi4lite
+
+  lint:
+    files:
+      - tb/komandara.vlt: {file_type: vlt}
+
+  tb:
+    files:
+      - tb/k10_tb.sv:  {file_type: systemVerilogSource}
+      - tb/k10_tb.cpp: {file_type: cppSource}
+
+parameters:
+  MEM_SIZE_KB:
+    datatype: int
+    default: 64
+    paramtype: vlogparam
+    description: BRAM size in kilobytes (must be power of 2)
+
+  BOOT_ADDR:
+    datatype: int
+    default: 0
+    paramtype: vlogparam
+    description: Initial program counter value
+
+  MEM_INIT:
+    datatype: str
+    default: ""
+    paramtype: vlogparam
+    description: Path to hex file for BRAM initialisation
+
+targets:
+  default:
+    filesets: [rtl]
+    toplevel: k10_top
+    parameters:
+      - MEM_SIZE_KB
+      - BOOT_ADDR
+      - MEM_INIT
+
+  sim:
+    default_tool: verilator
+    filesets: [rtl, tb, lint]
+    toplevel: k10_tb
+    parameters:
+      - MEM_SIZE_KB
+      - BOOT_ADDR
+      - MEM_INIT
+    tools:
+      verilator:
+        mode: cc
+        verilator_options:
+          - -Wall
+          - --trace
+          - -Wno-UNUSEDSIGNAL
+          - -Wno-UNDRIVEN
+

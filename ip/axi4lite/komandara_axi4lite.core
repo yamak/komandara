@@ -1,0 +1,48 @@
+CAPI=2:
+name: komandara:ip:axi4lite:0.2.0
+description: >
+  Komandara AXI4-Lite IP library — Master, Slave, Crossbar.
+
+filesets:
+  rtl:
+    files:
+      - rtl/komandara_axi4lite_pkg.sv:   {file_type: systemVerilogSource}
+      - rtl/komandara_axi4lite_slave.sv:  {file_type: systemVerilogSource}
+      - rtl/komandara_axi4lite_master.sv: {file_type: systemVerilogSource}
+      - rtl/komandara_axi4lite_xbar.sv:   {file_type: systemVerilogSource}
+    depend:
+      - komandara:ip:common
+
+  tb_slave:
+    files:
+      - rtl/tb/tb_axi4lite_slave.sv:  {file_type: systemVerilogSource}
+
+  tb_master:
+    files:
+      - rtl/tb/tb_axi4lite_master.sv: {file_type: systemVerilogSource}
+
+  tb_xbar:
+    files:
+      - rtl/tb/tb_axi4lite_xbar.sv:   {file_type: systemVerilogSource}
+
+targets:
+  default:
+    filesets: [rtl]
+
+  sim_slave:
+    description: AXI4-Lite Slave verification
+    filesets: [rtl, tb_slave]
+    toplevel: tb_axi4lite_slave
+    default_tool: xsim
+
+  sim_master:
+    description: AXI4-Lite Master verification
+    filesets: [rtl, tb_master]
+    toplevel: tb_axi4lite_master
+    default_tool: xsim
+
+  sim_xbar:
+    description: AXI4-Lite Crossbar verification
+    filesets: [rtl, tb_xbar]
+    toplevel: tb_axi4lite_xbar
+    default_tool: xsim

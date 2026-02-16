@@ -1,0 +1,91 @@
+// Komandara — Verilator Lint Waivers
+//
+// This file suppresses warnings that are known false-positives or expected
+// by-design.  Do NOT use inline "verilator lint_off" in RTL source files.
+
+// =========================================================================
+// Package-level parameters that may not be used in every instance
+// =========================================================================
+`verilator_config
+lint_off -rule UNUSEDPARAM -file "*/komandara_k10_pkg.sv"
+
+// =========================================================================
+// Unused bits of packed struct 'ctrl_t' in sub-modules that only use
+// a subset of the control fields — this is by-design.
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/k10_execute.sv"    -match "*i_ctrl*"
+lint_off -rule UNUSEDSIGNAL -file "*/k10_memory.sv"     -match "*i_ctrl*"
+lint_off -rule UNUSEDSIGNAL -file "*/k10_writeback.sv"  -match "*i_ctrl*"
+
+// =========================================================================
+// Pipeline register bits not read in all contexts (CSR addr/data in EX/MEM)
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/k10_core.sv" -match "*r_ex_mem*"
+
+// =========================================================================
+// Signals declared for future use / incomplete wiring
+// =========================================================================
+// Instruction bus error — will be wired to exception logic
+lint_off -rule UNUSEDSIGNAL -file "*/k10_core.sv" -match "*w_if_ibus_err*"
+// PMP check result — will be used to block illegal bus accesses
+lint_off -rule UNUSEDSIGNAL -file "*/k10_core.sv" -match "*w_dbus_pmp_ok*"
+// WFI input — WFI implementation deferred
+lint_off -rule UNUSEDSIGNAL -file "*/k10_csr.sv"  -match "*i_is_wfi*"
+// Lock bit extracted but not directly used in combinational check
+lint_off -rule UNUSEDSIGNAL -file "*/k10_pmp.sv"  -match "*w_lock*"
+
+// =========================================================================
+// Hazard unit: mem_mem_read reserved for future stall enhancements
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/k10_hazard_unit.sv" -match "*i_mem_mem_read*"
+
+// =========================================================================
+// Arbiter: w_rr_gnt used only in round-robin mode
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/komandara_arbiter.sv" -match "*w_rr_gnt*"
+
+// =========================================================================
+// BRAM AXI4-Lite wrapper: prot signals not used (no access control at BRAM)
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/komandara_bram_axi4lite.sv" -match "*prot*"
+lint_off -rule UNUSEDSIGNAL -file "*/komandara_bram_axi4lite.sv" -match "*addr*"
+lint_off -rule UNUSEDPARAM  -file "*/komandara_bram_axi4lite.sv" -match "*BYTES*"
+
+// =========================================================================
+// AXI4-Lite crossbar: STRB_WIDTH derived but used only internally
+// =========================================================================
+lint_off -rule UNUSEDPARAM -file "*/komandara_axi4lite_xbar.sv" -match "*STRB_WIDTH*"
+
+// =========================================================================
+// MUL/DIV: Lower 32 bits of unsigned/signed-unsigned products not used
+// (only upper half taken for MULH variants).
+// w_sub used only during CALC but always-computed — benign.
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/k10_mul_div.sv" -match "*w_mul_su*"
+lint_off -rule UNUSEDSIGNAL -file "*/k10_mul_div.sv" -match "*w_mul_uu*"
+lint_off -rule UNUSEDSIGNAL -file "*/k10_mul_div.sv" -match "*w_sub*"
+
+// =========================================================================
+// Compressed decoder: bimm[0] is always 0 for branch offset (by spec)
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/k10_compressed_decoder.sv" -match "*bimm*"
+
+// =========================================================================
+// PMP: unsigned comparison always true for region 0 (by design)
+// =========================================================================
+lint_off -rule UNSIGNED -file "*/k10_pmp.sv"
+
+// =========================================================================
+// Core debug block: rst_n used synchronously in assertion-like display
+// =========================================================================
+lint_off -rule SYNCASYNCNET -file "*/k10_core.sv" -match "*i_rst_n*"
+lint_off -rule SYNCASYNCNET -file "*/k10_top.sv"  -match "*i_rst_n*"
+
+// =========================================================================
+// LSU: upper 32 bits of shifted load-data combination not needed
+// (only lower 32 bits extracted after right-shift)
+// =========================================================================
+lint_off -rule UNUSEDSIGNAL -file "*/k10_lsu.sv" -match "*w_combined_shifted*"
+// Store-shift upper bits computed but only hi/lo parts extracted
+lint_off -rule UNUSEDSIGNAL -file "*/k10_lsu.sv" -match "*w_store_shifted*"
+lint_off -rule UNUSEDSIGNAL -file "*/k10_lsu.sv" -match "*w_strb_shifted*"

@@ -1,0 +1,11 @@
+build/
+*.jou
+*.log
+*.str
+.Xil/
+
+# Verification tools (built by scripts/setup_tools.sh)
+tools/
+
+# Python virtual environment
+.venv/

@@ -1,0 +1,51 @@
+# Copyright 2025 The Komandara Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+
+# ================================================================================
+#                  K10 — RISC-DV regression test list
+# ================================================================================
+# Imports the base RISC-DV test suite and adds K10-specific tests.
+# Tests that require unimplemented features (PMP, AMO writes) are excluded.
+# ================================================================================
+
+- import: <riscv_dv_root>/yaml/base_testlist.yaml
+
+# Override: arithmetic-only test with reduced instruction count for bringup
+- test: riscv_arithmetic_basic_test
+  description: >
+    K10 bringup: pure integer arithmetic (no branches, no memory)
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_int_numeric_corner_stream,4
+    --no_fence=1
+    --no_data_page=1
+    --no_branch_jump=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Load/store test with unaligned access enabled
+- test: riscv_unaligned_load_store_test
+  description: >
+    Unaligned load/store test — verifies that the LSU correctly handles
+    accesses that cross word boundaries by splitting into two aligned ops.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_load_store_rand_instr_stream,20
+    --directed_instr_1=riscv_load_store_hazard_instr_stream,20
+    --enable_unaligned_load_store=1
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test

@@ -1,0 +1,17 @@
+CAPI=2:
+name: komandara:ip:common:0.1.0
+description: >
+  Komandara shared infrastructure — Skid Buffer, Arbiter, BRAM, Bus Adapters.
+
+filesets:
+  rtl:
+    files:
+      - rtl/komandara_skid_buffer.sv:    {file_type: systemVerilogSource}
+      - rtl/komandara_arbiter.sv:        {file_type: systemVerilogSource}
+      - rtl/komandara_bram.sv:           {file_type: systemVerilogSource}
+      - rtl/komandara_bram_axi4lite.sv:  {file_type: systemVerilogSource}
+      - rtl/komandara_bus2axi4lite.sv:   {file_type: systemVerilogSource}
+
+targets:
+  default:
+    filesets: [rtl]
