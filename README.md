@@ -146,41 +146,44 @@ All bus modules verified using **Xilinx AXI Verification IP (VIP)** with 0 failu
 ## K10 Microarchitecture
 
 ```
-                    ┌──────────────────────────────────────────────────┐
-                    │                   k10_core                       │
-                    │                                                  │
-  ┌────────┐  ┌────┴────┐  ┌─────────┐  ┌─────────┐  ┌──────────┐  │
-  │  FETCH  │→│  DECODE  │→│ EXECUTE  │→│  MEMORY  │→│ WRITEBACK │  │
-  │ (k10_   │  │ (k10_   │  │ (k10_   │  │ (k10_   │  │ (k10_    │  │
-  │  fetch) │  │ decode) │  │execute) │  │memory)  │  │writeback)│  │
-  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  └──────────┘  │
-       │            │            │            │                       │
-       │     ┌──────┘     ┌──────┤     ┌──────┘                      │
-       │     │ compressed │  ALU │  LSU│                              │
-       │     │ decoder    │  IMM │ (unaligned                        │
-       │     │ regfile    │  MUL │  split)                           │
-       │     │            │  DIV │  AMO                              │
-       │     │            │      │                                   │
-       │     │            │  CSR │  PMP                              │
-       │     │            │      │                                   │
-       │     └────────────┘──────┘──────                             │
-       │            HAZARD UNIT (forwarding, stalls, flushes)        │
-       └──────────────────────────────────────────────────────────────┘
-                    │ ibus                    │ dbus
-                    ▼                         ▼
-              ┌──────────┐             ┌──────────┐
-              │bus2axi4  │             │bus2axi4  │
-              │lite      │             │lite      │
-              └────┬─────┘             └────┬─────┘
-                   │                        │
-              ┌────┴────────────────────────┴────┐
-              │      AXI4-Lite Crossbar (2×2)    │
-              └────┬────────────────────────┬────┘
-                   │                        │
-              ┌────┴────┐            ┌──────┴─────┐
-              │  BRAM    │            │ Peripheral │
-              │(64KB def)│            │   Port     │
-              └──────────┘            └────────────┘
++--------------------------------------------------------------------------------+
+|                                   k10_core                                     |
+|                                                                                |
+|  +--------+   +--------+   +---------+   +--------+   +-----------+            |
+|  | FETCH  |-->| DECODE |-->| EXECUTE |-->| MEMORY |-->| WRITEBACK |            |
+|  |k10_    |   |k10_    |   |k10_     |   |k10_    |   |k10_       |            |
+|  |fetch   |   |decode  |   |execute  |   |memory  |   |writeback  |            |
+|  +---+----+   +---+----+   +----+----+   +---+----+   +-----------+            |
+|      |            |             |            |                                 |
+|      |   decode side blocks     |            |                                 |
+|      |   - compressed decoder   |            |                                 |
+|      |   - regfile              |            |                                 |
+|      |                          |            |                                 |
+|      |              execute side blocks      memory side blocks                |
+|      |              - ALU                    - LSU (unaligned split)           |
+|      |              - IMM generator          - PMP checks                      |
+|      |              - MUL/DIV                                                  |
+|      |              - CSR path                                                 |
+|      |                                                                         |
+|      +------------------ HAZARD UNIT (forwarding/stall/flush) --------------+  |
++--------------------------------------------------------------------------------+
+                 | ibus                                   | dbus
+                 v                                        v
+            +------------+                          +------------+
+            | bus2axi4   |                          | bus2axi4   |
+            | lite       |                          | lite       |
+            +-----+------+                          +-----+------+
+                  |                                         |
+                  +----------------+   +--------------------+
+                                   |   |
+                          +--------+---+--------+
+                          | AXI4-Lite XBAR (2x2)|
+                          +--------+---+--------+
+                                   |   |
+                           +-------+   +---------+
+                           | BRAM  |   | Periph  |
+                           |64KB d.|   | Port    |
+                           +-------+   +---------+
 ```
 
 ### Key Design Decisions
