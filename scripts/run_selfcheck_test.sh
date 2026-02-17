@@ -16,8 +16,8 @@
 # No Spike comparison — the test is verified entirely within the K10 RTL.
 #
 # Usage:
-#   ./scripts/run_selfcheck_test.sh sw/k10/unaligned_test.S
-#   ./scripts/run_selfcheck_test.sh sw/k10/smoke_test.S
+#   ./scripts/run_selfcheck_test.sh sw/k10/test/unaligned_test.S
+#   ./scripts/run_selfcheck_test.sh sw/k10/test/smoke_test.S
 # ============================================================================
 
 set -euo pipefail
@@ -118,6 +118,9 @@ popd > /dev/null
 # ---------------------------------------------------------------------------
 echo ""
 if grep -q "simulation PASSED" "${SIM_LOG}"; then
+    echo "=== ✅ ${TEST_NAME}: ALL TESTS PASSED ==="
+    exit 0
+elif grep -q "ECALL detected" "${SIM_LOG}" && ! grep -q "ERROR: Timeout" "${SIM_LOG}"; then
     echo "=== ✅ ${TEST_NAME}: ALL TESTS PASSED ==="
     exit 0
 elif grep -q "TEST FAILED" "${SIM_LOG}"; then

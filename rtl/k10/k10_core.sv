@@ -317,6 +317,12 @@ module k10_core
                 w_exc_cause = EXC_STORE_MISALIGN;
                 w_exc_pc    = r_ex_mem.pc;
                 w_exc_tval  = r_ex_mem.alu_result;
+            end else if ((r_ex_mem.ctrl.mem_read || r_ex_mem.ctrl.mem_write) &&
+                         !w_dbus_pmp_ok) begin
+                w_exc_valid = 1'b1;
+                w_exc_cause = r_ex_mem.ctrl.mem_write ? EXC_STORE_FAULT : EXC_LOAD_FAULT;
+                w_exc_pc    = r_ex_mem.pc;
+                w_exc_tval  = r_ex_mem.alu_result;
             end else if (w_mem_err) begin
                 w_exc_valid = 1'b1;
                 w_exc_cause = r_ex_mem.ctrl.mem_read ? EXC_LOAD_FAULT : EXC_STORE_FAULT;
@@ -386,10 +392,10 @@ module k10_core
     ) u_pmp_dbus (
         .i_pmp_cfg  (w_pmp_cfg),
         .i_pmp_addr (w_pmp_addr),
-        .i_addr     (w_ex_alu_result),
+        .i_addr     (r_ex_mem.alu_result),
         .i_priv     (w_csr_priv),
-        .i_read     (r_id_ex.ctrl.mem_read),
-        .i_write    (r_id_ex.ctrl.mem_write),
+        .i_read     (r_ex_mem.ctrl.mem_read),
+        .i_write    (r_ex_mem.ctrl.mem_write),
         .i_exec     (1'b0),
         .o_allowed  (w_dbus_pmp_ok)
     );
@@ -433,7 +439,7 @@ module k10_core
         .i_alu_result     (r_ex_mem.alu_result),
         .i_rs2_data       (r_ex_mem.rs2_data),
         .i_ctrl           (r_ex_mem.ctrl),
-        .i_valid          (r_ex_mem.valid),
+        .i_valid          (r_ex_mem.valid && w_dbus_pmp_ok),
         .o_dbus_req       (o_dbus_req),
         .o_dbus_we        (o_dbus_we),
         .o_dbus_addr      (o_dbus_addr),

@@ -36,19 +36,24 @@ Default end-to-end riscv-dv flow (Spike vs RTL compare):
 ```
 Single riscv-dv random test:
 ```bash
-./scripts/run_riscv_dv.sh --test riscv_arithmetic_basic_test --seed 42
+./scripts/run_riscv_dv.sh --test k10_arithmetic_basic_test --seed 42
 ```
 Single directed assembly test with Spike comparison:
 ```bash
-./scripts/run_riscv_dv.sh --asm sw/k10/smoke_test.S
+./scripts/run_riscv_dv.sh --asm sw/k10/test/smoke_test.S
+```
+Manual test target via CMake (recommended for hand-written tests):
+```bash
+./scripts/run_riscv_dv.sh --manuel-test smoke_test
+./scripts/run_riscv_dv.sh --manuel-test k10_c_selftest
 ```
 Single self-checking assembly test (no Spike):
 ```bash
-./scripts/run_selfcheck_test.sh sw/k10/unaligned_test.S
+./scripts/run_selfcheck_test.sh sw/k10/test/unaligned_test.S
 ```
 Alternative self-check run:
 ```bash
-./scripts/run_selfcheck_test.sh sw/k10/smoke_test.S
+./scripts/run_selfcheck_test.sh sw/k10/test/smoke_test.S
 ```
 IP-level simulations (Vivado/xsim):
 ```bash

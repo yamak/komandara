@@ -436,10 +436,12 @@ module k10_lsu
             // --- Atomic result ---
             if (i_amo_op == AMO_SC) begin
                 o_rdata = w_sc_fail ? 32'd1 : 32'd0;
-            end else if (i_amo_op == AMO_LR) begin
-                o_rdata = i_dbus_rdata;            // Directly from bus
             end else begin
-                o_rdata = r_lo_rdata;              // Original value (AMO_READ)
+                if ((r_state == LSU_AMO_READ) && i_dbus_rvalid) begin
+                    o_rdata = i_dbus_rdata;        // AMO/LR read completion cycle
+                end else begin
+                    o_rdata = r_lo_rdata;          // Captured AMO_READ value
+                end
             end
         end else begin
             // --- Normal load: extract + sign-extend ---

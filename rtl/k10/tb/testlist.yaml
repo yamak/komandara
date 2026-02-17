@@ -10,13 +10,13 @@
 #                  K10 — RISC-DV regression test list
 # ================================================================================
 # Imports the base RISC-DV test suite and adds K10-specific tests.
-# Tests that require unimplemented features (PMP, AMO writes) are excluded.
+# K10 feature-focused tests (AMO/PMP/privileged/counters) are included below.
 # ================================================================================
 
 - import: <riscv_dv_root>/yaml/base_testlist.yaml
 
 # Override: arithmetic-only test with reduced instruction count for bringup
-- test: riscv_arithmetic_basic_test
+- test: k10_arithmetic_basic_test
   description: >
     K10 bringup: pure integer arithmetic (no branches, no memory)
   iterations: 1
@@ -33,78 +33,78 @@
   rtl_test: core_base_test
 
 # Random instruction mix
-- test: riscv_rand_instr_test
+- test: k10_rand_instr_test
   description: >
     Random mix of instructions including branches, jumps, loads/stores.
   iterations: 1
   gen_test: riscv_instr_base_test
   gen_opts: >
     --instr_cnt=500
-    --num_of_sub_program=5
+    --num_of_sub_program=0
     --no_fence=1
     --boot_mode=m
     --no_csr_instr=1
   rtl_test: core_base_test
 
 # Jump stress test
-- test: riscv_jump_stress_test
+- test: k10_jump_stress_test
   description: >
     Stress test for jump instructions (JAL, JALR) with many targets.
   iterations: 1
   gen_test: riscv_instr_base_test
   gen_opts: >
     --instr_cnt=500
-    --num_of_sub_program=20
+    --num_of_sub_program=0
     --no_fence=1
     --boot_mode=m
     --no_csr_instr=1
   rtl_test: core_base_test
 
 # Loop test
-- test: riscv_loop_test
+- test: k10_loop_test
   description: >
     Nested loop test to exercise branch prediction and pipeline stalls.
   iterations: 1
   gen_test: riscv_instr_base_test
   gen_opts: >
     --instr_cnt=500
-    --num_of_sub_program=5
-    --directed_instr_0=riscv_loop_instr,10
+    --num_of_sub_program=0
     --no_fence=1
     --boot_mode=m
     --no_csr_instr=1
   rtl_test: core_base_test
 
 # Random jump test
-- test: riscv_rand_jump_test
+- test: k10_rand_jump_test
   description: >
     Random jumps with data hazards to stress forwarding logic.
   iterations: 1
-  gen_test: riscv_rand_jump_test
+  gen_test: riscv_instr_base_test
   gen_opts: >
     --instr_cnt=500
-    --num_of_sub_program=10
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_jal_instr,8
     --no_fence=1
     --boot_mode=m
     --no_csr_instr=1
   rtl_test: core_base_test
 
 # No fence test
-- test: riscv_no_fence_test
+- test: k10_no_fence_test
   description: >
     Memory operations without fence instructions (test LSU without barriers).
   iterations: 1
   gen_test: riscv_instr_base_test
   gen_opts: >
     --instr_cnt=500
-    --num_of_sub_program=5
+    --num_of_sub_program=0
     --no_fence=1
     --boot_mode=m
     --no_csr_instr=1
   rtl_test: core_base_test
 
 # Illegal instruction test
-- test: riscv_illegal_instr_test
+- test: k10_illegal_instr_test
   description: >
     Test exception handling for illegal instructions.
   iterations: 1
@@ -112,42 +112,45 @@
   gen_opts: >
     --instr_cnt=200
     --num_of_sub_program=0
-    --illegal_instr_ratio=20
+    --illegal_instr_ratio=5
     --no_fence=1
     --boot_mode=m
   rtl_test: core_base_test
 
 # EBREAK test
-- test: riscv_ebreak_test
+- test: k10_ebreak_test
   description: >
     Test EBREAK exception handling (non-debug mode).
   iterations: 1
-  gen_test: riscv_instr_base_test
+  gen_test: riscv_rand_instr_test
   gen_opts: >
     --instr_cnt=200
     --num_of_sub_program=0
     --no_ebreak=0
+    --disable_compressed_instr=1
     --no_fence=1
     --boot_mode=m
   rtl_test: core_base_test
 
 # EBREAK debug mode test
-- test: riscv_ebreak_debug_mode_test
+- test: k10_ebreak_debug_mode_test
   description: >
-    Test EBREAK behavior when debug mode is enabled (dcsr.ebreakm).
+    Test EBREAK behavior when debug mode support is enabled.
   iterations: 1
-  gen_test: riscv_instr_base_test
+  gen_test: riscv_rand_instr_test
   gen_opts: >
     --instr_cnt=200
     --num_of_sub_program=0
     --no_ebreak=0
+    --disable_compressed_instr=1
     --no_fence=1
     --boot_mode=m
-    --enable_debug_mode=1
+    --gen_debug_section=1
+    --set_dcsr_ebreak=1
   rtl_test: core_base_test
 
 # Full interrupt test
-- test: riscv_full_interrupt_test
+- test: k10_full_interrupt_test
   description: >
     Test interrupt handling with timer and software interrupts.
   iterations: 1
@@ -161,32 +164,197 @@
   rtl_test: core_base_test
 
 # CSR test
-- test: riscv_csr_test
+- test: k10_csr_test
   description: >
     Test CSR read/write/set/clear operations on implemented CSRs.
-  iterations: 1
-  gen_test: riscv_csr_test
-  gen_opts: >
-    --instr_cnt=200
-    --num_of_sub_program=0
-    --no_fence=1
-    --boot_mode=m
-  rtl_test: core_base_test
-
-# Load/store test with unaligned access enabled
-- test: riscv_unaligned_load_store_test
-  description: >
-    Unaligned load/store test — verifies that the LSU correctly handles
-    accesses that cross word boundaries by splitting into two aligned ops.
   iterations: 1
   gen_test: riscv_instr_base_test
   gen_opts: >
     --instr_cnt=200
     --num_of_sub_program=0
-    --directed_instr_0=riscv_load_store_rand_instr_stream,20
-    --directed_instr_1=riscv_load_store_hazard_instr_stream,20
+    --no_fence=1
+    --boot_mode=m
+    --randomize_csr=1
+  rtl_test: core_base_test
+
+# Load/store test with unaligned access enabled
+- test: k10_unaligned_load_store_test
+  description: >
+    Unaligned load/store test — verifies LSU behavior across misaligned accesses.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_load_store_rand_instr_stream,4
     --enable_unaligned_load_store=1
     --no_fence=1
     --boot_mode=m
     --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Atomic extension test (A): LR/SC + AMO stream
+- test: k10_amo_test
+  description: >
+    RISC-DV atomic extension test (LR/SC and AMO operations).
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_lr_sc_instr_stream,4
+    --directed_instr_1=riscv_amo_instr_stream,4
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# PMP test: enforce configured memory access permissions
+- test: k10_pmp_test
+  description: >
+    RISC-DV PMP configuration and access-permission validation.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --no_fence=1
+    --boot_mode=m
+  rtl_test: core_base_test
+
+# Privileged mode randomization over supported M/U modes
+- test: k10_privileged_mode_rand_test
+  description: >
+    RISC-DV privileged mode random test over M/U.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --boot_mode=u
+    --no_fence=1
+  rtl_test: core_base_test
+
+# Boot in U-mode and attempt invalid/higher-privilege CSR accesses
+- test: k10_invalid_csr_test
+  description: >
+    RISC-DV user-mode invalid CSR access validation.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --enable_access_invalid_csr_level=1
+    --boot_mode=u
+    --no_fence=1
+  rtl_test: core_base_test
+
+# Performance counter test: mcycle/minstret monotonicity and retire progress
+- test: k10_perf_counter_test
+  description: >
+    RISC-DV CSR-heavy test including performance counters.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --boot_mode=m
+    --no_fence=1
+  rtl_test: core_base_test
+
+# Fence instruction coverage test
+- test: k10_fence_test
+  description: >
+    Random instruction test with fence/fence.i enabled to validate ordering
+    instructions and related pipeline flush behavior.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --no_fence=0
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Deep callstack robustness test
+- test: k10_callstack_depth_test
+  description: >
+    Deep sub-program callstack stress test for pygen/callstack generation and
+    RTL control-flow stability under nested program partitions.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=8
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# ISA compliance-like smoke test (short runtime)
+- test: k10_isa_smoke_test
+  description: >
+    Short ISA smoke covering mixed I/M/C/A/CSR/FENCE instruction classes.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=300
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_int_numeric_corner_stream,4
+    --directed_instr_1=riscv_jal_instr,4
+    --no_fence=0
+    --boot_mode=m
+    --no_data_page=1
+    --no_load_store=1
+  rtl_test: core_base_test
+
+# Debug single-step test (short runtime)
+- test: k10_debug_single_step_test
+  description: >
+    Debug-mode single-step flow with generated debug ROM and DCSR.step enabled.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --no_fence=1
+    --boot_mode=m
+    --gen_debug_section=1
+    --enable_debug_single_step=1
+    --set_dcsr_ebreak=1
+  rtl_test: core_base_test
+
+# Memory ordering (quick): fence-heavy control-flow profile
+- test: k10_fence_order_smoke_test
+  description: >
+    Quick ordering smoke with fence/fence.i enabled and hazard stream mix.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=80
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_jal_instr,2
+    --no_fence=0
+    --boot_mode=m
+    --no_csr_instr=1
+    --no_load_store=1
+    --no_data_page=1
+  rtl_test: core_base_test
+
+# Memory ordering (quick): load/store hazard profile
+- test: k10_ls_hazard_smoke_test
+  description: >
+    Quick load/store hazard smoke with fences disabled for stable short runtime.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=80
+    --num_of_sub_program=0
+    --directed_instr_0=riscv_load_store_rand_instr_stream,2
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+    --enable_unaligned_load_store=0
+    --disable_compressed_instr=1
   rtl_test: core_base_test

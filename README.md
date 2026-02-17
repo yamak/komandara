@@ -126,16 +126,32 @@ komandara/
 | Test | Method | Status |
 |---|---|---|
 | **Smoke Test** (basic arithmetic) | Spike trace comparison | ✅ Pass |
-| **RISC-DV Arithmetic** (`riscv_arithmetic_basic_test`) | Spike trace comparison (random, 200 instr) | ✅ Pass |
 | **Unaligned Memory Access** (19 tests) | Self-checking (LW/LH/LHU/SW/SH at offset +1,+2,+3) | ✅ Pass |
 | **Multiply/Divide** (standalone) | Self-checking (MUL/MULH/DIV/REM/DIVU/REMU, div-by-zero, overflow) | ✅ Pass |
-| **C Self-Test Suite** (`sw/k10/tests`) | Self-checking (Arithmetic, Unaligned, IRQ, Traps) | ✅ Pass |
-| **RISC-DV Regression** (13 tests) | Spike trace comparison (Auto-generated assembly) | ⏳ integrated (Available) |
-| **RISC-DV Load/Store** (`riscv_unaligned_load_store_test`) | Spike trace comparison | 📋 Pending |
-| **CSR Test** (`riscv_csr_test`) | Spike trace comparison | 📋 Pending |
-| **Branch/Jump Stress** | Spike trace comparison | 📋 Pending |
-| **PMP Test** | Directed test | 📋 Pending |
-| **Interrupt Test** | Directed test | 📋 Pending |
+| **C Self-Test Suite** (`sw/k10/test/k10_c_selftest.c`) | Self-checking (Arithmetic, Unaligned, IRQ, Traps) | ✅ Pass |
+| **RISC-DV Arithmetic** (`k10_arithmetic_basic_test`) | Spike trace comparison (random, 200 instr) | ✅ Pass |
+| **RISC-DV Random Mix** (`k10_rand_instr_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Jump Stress** (`k10_jump_stress_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Loop Stress** (`k10_loop_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Random Jump** (`k10_rand_jump_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV No-Fence Profile** (`k10_no_fence_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Illegal Instruction** (`k10_illegal_instr_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV EBREAK** (`k10_ebreak_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV EBREAK Debug** (`k10_ebreak_debug_mode_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Interrupt** (`k10_full_interrupt_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV CSR** (`k10_csr_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Load/Store** (`k10_unaligned_load_store_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV AMO** (`k10_amo_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV PMP** (`k10_pmp_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Privileged Mode** (`k10_privileged_mode_rand_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Invalid CSR** (`k10_invalid_csr_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Performance Counter** (`k10_perf_counter_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Fence** (`k10_fence_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Callstack Depth** (`k10_callstack_depth_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV ISA Smoke** (`k10_isa_smoke_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Debug Single-Step** (`k10_debug_single_step_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV Fence Order Smoke** (`k10_fence_order_smoke_test`) | Spike trace comparison | ✅ Pass |
+| **RISC-DV LS Hazard Smoke** (`k10_ls_hazard_smoke_test`) | Spike trace comparison | ✅ Pass |
 
 ### Bus Infrastructure
 
@@ -287,19 +303,26 @@ All tools are installed **locally** into the `tools/` directory (gitignored):
 ### Smoke Test (Spike Comparison)
 
 ```bash
-./scripts/run_riscv_dv.sh --asm sw/k10/smoke_test.S
+./scripts/run_riscv_dv.sh --asm sw/k10/test/smoke_test.S
+```
+
+### Manual Test Runner (CMake)
+
+```bash
+./scripts/run_riscv_dv.sh --manuel-test smoke_test
+./scripts/run_riscv_dv.sh --manuel-test k10_c_selftest
 ```
 
 ### RISC-DV Random Arithmetic Test
 
 ```bash
-./scripts/run_riscv_dv.sh --test riscv_arithmetic_basic_test --seed 42
+./scripts/run_riscv_dv.sh --test k10_arithmetic_basic_test --seed 42
 ```
 
 ### Unaligned Memory Access Test (Self-Checking)
 
 ```bash
-./scripts/run_selfcheck_test.sh sw/k10/unaligned_test.S
+./scripts/run_selfcheck_test.sh sw/k10/test/unaligned_test.S
 ```
 
 ### Standalone Mul/Div Test

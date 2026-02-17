@@ -318,6 +318,8 @@ module k10_decode
                 if (w_funct3 == 3'b010) begin    // .W only for RV32
                     o_ctrl.is_atomic = 1'b1;
                     o_ctrl.amo_op    = amo_op_e'(w_funct7[6:2]);
+                    o_ctrl.mem_read  = 1'b1;
+                    o_ctrl.mem_write = (amo_op_e'(w_funct7[6:2]) != AMO_LR);
                     o_ctrl.reg_write = 1'b1;
                     o_ctrl.wb_sel    = WB_MEM;
                     // ALU computes address (rs1 + 0)

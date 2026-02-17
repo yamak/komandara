@@ -262,12 +262,39 @@ module k10_tb
     // ECALL detection — watch for ECALL exception in EX stage
     // -----------------------------------------------------------------------
     logic w_ecall_trap;
-    assign w_ecall_trap = u_dut.u_core.w_exc_valid &&
-                          (u_dut.u_core.w_exc_cause == 32'd11);  // EXC_ECALL_M
+    logic r_finish_pending;
+    logic [3:0] r_finish_count;
 
-    always @(posedge i_clk) begin
-        if (w_ecall_trap) begin
-            $display("[K10_TB] ECALL detected — simulation complete.");
+    localparam int unsigned ECALL_DRAIN_CYCLES = 3;
+
+    assign w_ecall_trap = u_dut.u_core.w_exc_valid &&
+                          ((u_dut.u_core.w_exc_cause == 32'd8)  ||  // EXC_ECALL_U
+                           (u_dut.u_core.w_exc_cause == 32'd9)  ||  // EXC_ECALL_S
+                           (u_dut.u_core.w_exc_cause == 32'd11));   // EXC_ECALL_M
+
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            r_finish_pending <= 1'b0;
+            r_finish_count   <= '0;
+        end else begin
+            if (!r_finish_pending && w_ecall_trap) begin
+                r_finish_pending <= 1'b1;
+                r_finish_count   <= ECALL_DRAIN_CYCLES[3:0];
+            end else if (r_finish_pending && (r_finish_count != 0)) begin
+                r_finish_count <= r_finish_count - 1'b1;
+            end
+
+            if (r_finish_pending && (r_finish_count == 0)) begin
+                $display("[K10_TB] ECALL detected — simulation complete.");
+                $finish;
+            end
+        end
+    end
+
+    always_ff @(posedge i_clk) begin
+        if (u_dut.u_core.w_exc_valid &&
+            (u_dut.u_core.w_exc_cause == 32'd3)) begin
+            $display("[K10_TB] EBREAK detected — simulation failed.");
             $finish;
         end
     end
