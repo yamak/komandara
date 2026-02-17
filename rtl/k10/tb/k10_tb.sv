@@ -264,8 +264,17 @@ module k10_tb
     logic w_ecall_trap;
     logic r_finish_pending;
     logic [3:0] r_finish_count;
+    int r_finish_on_ecall;
+    int r_finish_on_ebreak;
 
     localparam int unsigned ECALL_DRAIN_CYCLES = 3;
+
+    initial begin
+        r_finish_on_ecall = 1;
+        r_finish_on_ebreak = 0;
+        void'($value$plusargs("finish_on_ecall=%d", r_finish_on_ecall));
+        void'($value$plusargs("finish_on_ebreak=%d", r_finish_on_ebreak));
+    end
 
     assign w_ecall_trap = u_dut.u_core.w_exc_valid &&
                           ((u_dut.u_core.w_exc_cause == 32'd8)  ||  // EXC_ECALL_U
@@ -277,7 +286,7 @@ module k10_tb
             r_finish_pending <= 1'b0;
             r_finish_count   <= '0;
         end else begin
-            if (!r_finish_pending && w_ecall_trap) begin
+            if (!r_finish_pending && (r_finish_on_ecall != 0) && w_ecall_trap) begin
                 r_finish_pending <= 1'b1;
                 r_finish_count   <= ECALL_DRAIN_CYCLES[3:0];
             end else if (r_finish_pending && (r_finish_count != 0)) begin
@@ -292,7 +301,8 @@ module k10_tb
     end
 
     always_ff @(posedge i_clk) begin
-        if (u_dut.u_core.w_exc_valid &&
+        if ((r_finish_on_ebreak != 0) &&
+            u_dut.u_core.w_exc_valid &&
             (u_dut.u_core.w_exc_cause == 32'd3)) begin
             $display("[K10_TB] EBREAK detected — simulation failed.");
             $finish;

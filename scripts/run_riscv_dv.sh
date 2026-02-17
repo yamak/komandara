@@ -50,6 +50,7 @@ SEED=""
 ASM_FILE=""
 MANUAL_TEST=""
 MANUAL_NO_SPIKE=0
+MANUAL_C_TEST=0
 
 # Special modes
 RUN_ALL=0
@@ -129,7 +130,7 @@ if [[ "${RUN_APP}" -eq 1 ]]; then
 
     SIM_DIR="${PROJECT_ROOT}/build/komandara_core_k10_0.1.0/sim-verilator"
     echo "  Running simulation..."
-    timeout 60 "${SIM_DIR}/Vk10_tb" --trace 2>&1 || true
+    timeout 60 "${SIM_DIR}/Vk10_tb" --trace +finish_on_ecall=0 2>&1 || true
 
     if [[ -f "k10_sim.fst" ]]; then
         cp k10_sim.fst "${OUTPUT_DIR}/k10_sim.fst"
@@ -236,7 +237,10 @@ if [[ -n "${MANUAL_TEST}" ]]; then
     fi
 
     # Tests that rely on self-checking semantics (no Spike compare)
-    if [[ -f "${MANUAL_DIR}/${TEST_NAME}.c" || "${TEST_NAME}" == "unaligned_test" ]]; then
+    if [[ -f "${MANUAL_DIR}/${TEST_NAME}.c" ]]; then
+        MANUAL_C_TEST=1
+        MANUAL_NO_SPIKE=1
+    elif [[ "${TEST_NAME}" == "unaligned_test" ]]; then
         MANUAL_NO_SPIKE=1
     fi
 elif [[ -n "${ASM_FILE}" ]]; then
@@ -358,7 +362,11 @@ if [[ ! -x "${SIM_EXE}" ]]; then
     exit 1
 fi
 
-timeout 60 "${SIM_EXE}" 2>&1 | tee "${OUTPUT_DIR}/k10_sim.log"
+SIM_ARGS=()
+if [[ "${MANUAL_C_TEST}" -eq 1 ]]; then
+    SIM_ARGS+=("+finish_on_ecall=0")
+fi
+timeout 60 "${SIM_EXE}" "${SIM_ARGS[@]}" 2>&1 | tee "${OUTPUT_DIR}/k10_sim.log"
 
 if [[ -f "k10_trace.csv" ]]; then
     cp k10_trace.csv "${K10_CSV}"
@@ -385,7 +393,8 @@ COMPARE_LOG="${OUTPUT_DIR}/${TEST_NAME}_compare.log"
 if [[ "${MANUAL_NO_SPIKE}" -eq 1 ]]; then
     if grep -q "ERROR: Timeout" "${OUTPUT_DIR}/k10_sim.log"; then
         echo "[FAILED] RTL self-check timed out" > "${COMPARE_LOG}"
-    elif grep -q "ECALL detected" "${OUTPUT_DIR}/k10_sim.log"; then
+    elif grep -q "\[SIM_CTRL\] \*\*\* TEST PASSED \*\*\*" "${OUTPUT_DIR}/k10_sim.log" || \
+         grep -q "ECALL detected" "${OUTPUT_DIR}/k10_sim.log"; then
         echo "[PASSED] RTL self-check completed with ECALL" > "${COMPARE_LOG}"
     else
         echo "[FAILED] RTL self-check ended without ECALL" > "${COMPARE_LOG}"
@@ -405,6 +414,10 @@ echo "  Compare log: ${COMPARE_LOG}"
 if grep -q "PASSED" "${COMPARE_LOG}"; then
     echo "  ✅ PASSED: Spike and K10 traces match"
     exit 0
+elif [[ "${MANUAL_NO_SPIKE}" -eq 1 ]]; then
+    echo "  ❌ FAILED: RTL self-check failed"
+    echo "  Check ${COMPARE_LOG} for details"
+    exit 1
 elif grep -q "\[FAILED\]" "${COMPARE_LOG}" && ! grep -q "Mismatch\[[1-9]" "${COMPARE_LOG}"; then
     echo "  ⚠️  SOFT PASS: Trace prefix matches; only tail-length mismatch remains"
     exit 0

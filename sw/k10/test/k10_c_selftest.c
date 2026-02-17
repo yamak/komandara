@@ -203,8 +203,8 @@ static int test_ebreak(void) {
 
     ebreak_fired = 0;
 
-    // Trigger EBREAK — trap handler will set ebreak_fired and skip instruction
-    __asm__ volatile ("ebreak");
+    // Trigger 32-bit EBREAK (avoid compressed c.ebreak encoding)
+    __asm__ volatile (".word 0x00100073");
 
     TEST_ASSERT(ebreak_fired, "EBREAK trap not taken");
 
