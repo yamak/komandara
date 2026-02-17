@@ -15,25 +15,26 @@
 // ============================================================================
 // K10 — Verilator C++ Testbench Driver
 // ============================================================================
-// Provides clock/reset generation, max-cycle timeout, and VCD trace support.
-//
 // Usage:
-//   ./Vk10_tb [+verilator+seed+<N>]
+//   ./Vk10_tb [+verilator+seed+<N>] [--trace]
 //
 // The simulation terminates when:
-//   1. The SV testbench detects an ECALL ($finish), or
+//   1. The SV testbench detects an ECALL/sim_ctrl ($finish), or
 //   2. MAX_CYCLES is reached (timeout / fail)
+//
+// --trace  enables FST waveform dump to k10_sim.fst
 // ============================================================================
 
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 
 #include "Vk10_tb.h"
 #include "verilated.h"
 
-#ifdef VM_TRACE
-#include "verilated_vcd_c.h"
+#ifdef VM_TRACE_FST
+#include "verilated_fst_c.h"
 #endif
 
 static constexpr uint64_t MAX_CYCLES = 1'000'000;
@@ -45,15 +46,27 @@ int main(int argc, char** argv)
     const std::unique_ptr<VerilatedContext> ctx{new VerilatedContext};
     ctx->commandArgs(argc, argv);
 
+    // Parse custom args
+    bool do_trace = false;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--trace") == 0) do_trace = true;
+    }
+
     // DUT
     const std::unique_ptr<Vk10_tb> top{new Vk10_tb{ctx.get(), "TOP"}};
 
-    // VCD trace
-#ifdef VM_TRACE
-    ctx->traceEverOn(true);
-    VerilatedVcdC* tfp = new VerilatedVcdC;
-    top->trace(tfp, 99);
-    tfp->open("k10_sim.vcd");
+    // FST trace
+#ifdef VM_TRACE_FST
+    VerilatedFstC* tfp = nullptr;
+    if (do_trace) {
+        ctx->traceEverOn(true);
+        tfp = new VerilatedFstC;
+        top->trace(tfp, 99);
+        tfp->open("k10_sim.fst");
+        printf("[K10_TB] FST trace enabled: k10_sim.fst\n");
+    }
+#else
+    (void)do_trace;
 #endif
 
     // Initialise signals
@@ -68,15 +81,15 @@ int main(int argc, char** argv)
         // Toggle clock (2 eval calls per cycle)
         top->i_clk = 0;
         top->eval();
-#ifdef VM_TRACE
-        tfp->dump(ctx->time());
+#ifdef VM_TRACE_FST
+        if (tfp) tfp->dump(ctx->time());
 #endif
         ctx->timeInc(5);
 
         top->i_clk = 1;
         top->eval();
-#ifdef VM_TRACE
-        tfp->dump(ctx->time());
+#ifdef VM_TRACE_FST
+        if (tfp) tfp->dump(ctx->time());
 #endif
         ctx->timeInc(5);
 
@@ -98,9 +111,11 @@ int main(int argc, char** argv)
     // Cleanup
     top->final();
 
-#ifdef VM_TRACE
-    tfp->close();
-    delete tfp;
+#ifdef VM_TRACE_FST
+    if (tfp) {
+        tfp->close();
+        delete tfp;
+    }
 #endif
 
     return finish_status;

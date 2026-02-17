@@ -47,8 +47,8 @@ bit support_pmp = 1;
 // No ePMP
 bit support_epmp = 0;
 
-// No debug mode
-bit support_debug_mode = 0;
+// Debug mode — supported (dcsr, dpc, dscratch0/1, DRET)
+bit support_debug_mode = 1;
 
 // No U-mode trap delegation
 bit support_umode_trap = 0;

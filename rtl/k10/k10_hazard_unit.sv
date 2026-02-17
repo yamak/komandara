@@ -51,6 +51,7 @@ module k10_hazard_unit
     input  logic        i_branch_taken,     // from EX
     input  logic        i_trap_taken,       // from CSR
     input  logic        i_mret_taken,       // from CSR
+    input  logic        i_dret_taken,       // from CSR (debug return)
     input  logic        i_fence_i,          // FENCE.I in ID stage
 
     // ---- Busy signals ----
@@ -158,7 +159,7 @@ module k10_hazard_unit
         o_flush_ex  = 1'b0;
         o_flush_mem = 1'b0;
 
-        if (i_trap_taken || i_mret_taken) begin
+        if (i_trap_taken || i_mret_taken || i_dret_taken) begin
             // Full pipeline flush
             o_flush_if  = 1'b1;
             o_flush_id  = 1'b1;
@@ -169,8 +170,8 @@ module k10_hazard_unit
             o_flush_if = 1'b1;
             o_flush_id = 1'b1;
         end else if (w_load_use && !w_mem_stall && !w_ex_stall) begin
-            // Insert bubble: flush ID/EX register (NOP enters EX)
-            o_flush_id = 1'b1;
+            // Insert bubble: handled by w_stall_id in k10_core.sv
+            // (w_stall_id causes ID/EX to load NOP while stalling IF/ID)
         end
     end
 

@@ -208,6 +208,7 @@ package komandara_k10_pkg;
     logic       is_ecall;
     logic       is_ebreak;
     logic       is_mret;
+    logic       is_dret;
     logic       is_wfi;
     logic       is_fence;
     logic       is_fence_i;
@@ -298,6 +299,11 @@ package komandara_k10_pkg;
   parameter logic [31:0] INT_U_EXT   = 32'h8000_0008;
   parameter logic [31:0] INT_M_EXT   = 32'h8000_000B;
 
+  // Fast interrupt codes (Ibex-style, causes 16..30)
+  parameter logic [31:0] INT_FAST_0  = 32'h8000_0010;
+  parameter logic [31:0] INT_FAST_14 = 32'h8000_001E;
+  parameter int unsigned NUM_FAST_IRQ = 15;
+
   // =========================================================================
   // CSR Addresses  (M + U mode subset)
   // =========================================================================
@@ -335,6 +341,12 @@ package komandara_k10_pkg;
   parameter logic [11:0] CSR_CYCLEH     = 12'hC80;
   parameter logic [11:0] CSR_TIMEH      = 12'hC81;
   parameter logic [11:0] CSR_INSTRETH   = 12'hC82;
+
+  // Debug Mode CSRs
+  parameter logic [11:0] CSR_DCSR       = 12'h7B0;
+  parameter logic [11:0] CSR_DPC        = 12'h7B1;
+  parameter logic [11:0] CSR_DSCRATCH0  = 12'h7B2;
+  parameter logic [11:0] CSR_DSCRATCH1  = 12'h7B3;
 
   // PMP Configuration
   parameter logic [11:0] CSR_PMPCFG0    = 12'h3A0;
@@ -404,6 +416,7 @@ package komandara_k10_pkg;
       is_ecall:      1'b0,
       is_ebreak:     1'b0,
       is_mret:       1'b0,
+      is_dret:       1'b0,
       is_wfi:        1'b0,
       is_fence:      1'b0,
       is_fence_i:    1'b0,

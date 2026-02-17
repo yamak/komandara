@@ -192,7 +192,7 @@ module k10_compressed_decoder
                 // C.JAL → jal x1, offset   (RV32 only)
                 3'b001: begin
                     // J-type: imm[20|10:1|11|19:12] | rd | opcode
-                    o_instr = {w_q1_jimm[11], w_q1_jimm[9:0], w_q1_jimm[10],
+                    o_instr = {w_q1_jimm[11], w_q1_jimm[10:1], w_q1_jimm[11],
                                {8{w_q1_jimm[11]}}, 5'd1, 7'b1101111};
                 end
 
@@ -279,7 +279,7 @@ module k10_compressed_decoder
 
                 // C.J → jal x0, offset
                 3'b101: begin
-                    o_instr = {w_q1_jimm[11], w_q1_jimm[9:0], w_q1_jimm[10],
+                    o_instr = {w_q1_jimm[11], w_q1_jimm[10:1], w_q1_jimm[11],
                                {8{w_q1_jimm[11]}}, 5'd0, 7'b1101111};
                 end
 

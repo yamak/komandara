@@ -65,6 +65,10 @@ module k10_top
     input  logic        i_ext_irq,
     input  logic        i_timer_irq,
     input  logic        i_sw_irq,
+    input  logic [14:0] i_irq_fast,
+
+    // ==== Debug ====
+    input  logic        i_debug_req,
 
     // ==== Timer ====
     input  logic [63:0] i_mtime,
@@ -150,6 +154,9 @@ module k10_top
         .i_ext_irq     (i_ext_irq),
         .i_timer_irq   (i_timer_irq),
         .i_sw_irq      (i_sw_irq),
+        .i_irq_fast    (i_irq_fast),
+        // Debug
+        .i_debug_req   (i_debug_req),
         .i_mtime       (i_mtime)
     );
 

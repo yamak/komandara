@@ -116,6 +116,7 @@ module k10_decode
             is_ecall:      1'b0,
             is_ebreak:     1'b0,
             is_mret:       1'b0,
+            is_dret:       1'b0,
             is_wfi:        1'b0,
             is_fence:      1'b0,
             is_fence_i:    1'b0,
@@ -296,6 +297,7 @@ module k10_decode
                         12'h000: o_ctrl.is_ecall  = 1'b1;     // ECALL
                         12'h001: o_ctrl.is_ebreak = 1'b1;     // EBREAK
                         12'h302: o_ctrl.is_mret   = 1'b1;     // MRET
+                        12'h7B2: o_ctrl.is_dret   = 1'b1;     // DRET
                         12'h105: o_ctrl.is_wfi    = 1'b1;     // WFI
                         default: o_ctrl.illegal   = 1'b1;
                     endcase

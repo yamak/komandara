@@ -64,17 +64,25 @@ module k10_csr
     // ---- System instructions ----
     input  logic        i_is_mret,
     input  logic        i_is_wfi,
+    input  logic        i_is_dret,           // DRET instruction
 
     // ---- External interrupts ----
     input  logic        i_ext_irq,           // Machine external interrupt
     input  logic        i_timer_irq,         // Machine timer interrupt
     input  logic        i_sw_irq,            // Machine software interrupt
+    input  logic [14:0] i_irq_fast,          // Fast interrupts (Ibex-style)
+
+    // ---- Debug ----
+    input  logic        i_debug_req,         // External debug halt request
+    output logic        o_debug_mode,        // Currently in debug mode
 
     // ---- Trap output (redirect PC) ----
     output logic        o_trap_taken,
     output logic [31:0] o_trap_target,
     output logic        o_mret_taken,
     output logic [31:0] o_mret_target,
+    output logic        o_dret_taken,
+    output logic [31:0] o_dret_target,
 
     // ---- Performance counters ----
     input  logic        i_instr_retired,     // WB stage committed
@@ -129,14 +137,34 @@ module k10_csr
     logic r_mie_meie;   // [11] Machine External
     logic r_mie_mtie;   // [7]  Machine Timer
     logic r_mie_msie;   // [3]  Machine Software
+    logic [14:0] r_mie_fast;  // [30:16] Fast interrupts
 
     logic [31:0] w_mie;
-    assign w_mie = {20'd0, r_mie_meie, 3'd0, r_mie_mtie, 3'd0, r_mie_msie, 3'd0};
+    assign w_mie = {1'b0, r_mie_fast, 4'd0, r_mie_meie, 3'd0, r_mie_mtie, 3'd0, r_mie_msie, 3'd0};
 
     // --- mip (Machine Interrupt Pending) ---
     // MEIP, MTIP, MSIP are read-only (driven by external sources)
+    // Fast IRQ pending bits [30:16] driven by i_irq_fast
     logic [31:0] w_mip;
-    assign w_mip = {20'd0, i_ext_irq, 3'd0, i_timer_irq, 3'd0, i_sw_irq, 3'd0};
+    assign w_mip = {1'b0, i_irq_fast, 4'd0, i_ext_irq, 3'd0, i_timer_irq, 3'd0, i_sw_irq, 3'd0};
+
+    // --- Debug Mode Registers ---
+    logic        r_debug_mode;
+    logic [31:0] r_dcsr;
+    logic [31:0] r_dpc;
+    logic [31:0] r_dscratch0;
+    logic [31:0] r_dscratch1;
+
+    assign o_debug_mode = r_debug_mode;
+
+    // dcsr fields:
+    //   [31:28] xdebugver = 4 (external debug)
+    //   [15]    ebreakm   = enter debug on ebreak in M-mode
+    //   [8:6]   cause     = debug entry cause
+    //   [2]     step      = single-step
+    //   [1:0]   prv       = privilege before debug entry
+    logic [31:0] w_dcsr;
+    assign w_dcsr = r_dcsr | {4'd4, 16'd0, 12'd0};  // xdebugver always 4
 
     // --- mtvec ---
     logic [31:0] r_mtvec;  // BASE[31:2], MODE[1:0]  (0=Direct, 1=Vectored)
@@ -173,9 +201,9 @@ module k10_csr
         w_irq_pending = 1'b0;
         w_irq_cause   = 32'd0;
 
-        // Interrupts only taken when globally enabled and in appropriate mode
-        if (r_mstatus_mie || (r_priv < PRIV_M)) begin
-            // Priority: MEI > MSI > MTI  (per spec 3.1.9)
+        // No interrupts in debug mode
+        if (!r_debug_mode && (r_mstatus_mie || (r_priv < PRIV_M))) begin
+            // Priority: MEI > MSI > MTI > Fast[0..14]  (per spec 3.1.9)
             if (w_mip[11] && w_mie[11]) begin
                 w_irq_pending = 1'b1;
                 w_irq_cause   = INT_M_EXT;
@@ -185,6 +213,40 @@ module k10_csr
             end else if (w_mip[7] && w_mie[7]) begin
                 w_irq_pending = 1'b1;
                 w_irq_cause   = INT_M_TIMER;
+            end else begin
+                // Fast interrupts (causes 16..30)
+                for (int i = 0; i < 15; i++) begin
+                    if (w_mip[16+i] && w_mie[16+i]) begin
+                        w_irq_pending = 1'b1;
+                        w_irq_cause   = {1'b1, 31'(16 + i)};
+                        break;
+                    end
+                end
+            end
+        end
+    end
+
+    // -----------------------------------------------------------------------
+    // Debug mode entry detection
+    // -----------------------------------------------------------------------
+    logic w_debug_entry;
+    logic [2:0] w_debug_cause;
+
+    always_comb begin
+        w_debug_entry = 1'b0;
+        w_debug_cause = 3'd0;
+
+        if (!r_debug_mode) begin
+            if (i_debug_req) begin
+                w_debug_entry = 1'b1;
+                w_debug_cause = 3'd3;  // haltreq
+            end else if (i_exc_valid && i_exc_cause == EXC_BREAKPOINT &&
+                         r_dcsr[15]) begin  // ebreakm
+                w_debug_entry = 1'b1;
+                w_debug_cause = 3'd1;  // ebreak
+            end else if (r_dcsr[2]) begin  // step
+                w_debug_entry = 1'b1;
+                w_debug_cause = 3'd4;  // step
             end
         end
     end
@@ -209,14 +271,18 @@ module k10_csr
     end
 
     // -----------------------------------------------------------------------
-    // Trap / MRET outputs
+    // Trap / MRET / DRET outputs
     // -----------------------------------------------------------------------
-    assign o_trap_taken  = i_exc_valid || w_irq_pending;
+    // Debug entry takes priority over everything
+    assign o_trap_taken  = w_debug_entry ? 1'b0 :
+                           (i_exc_valid || w_irq_pending) && !r_debug_mode;
     assign o_trap_target = w_trap_vectored && w_irq_pending && !i_exc_valid
                            ? w_trap_vec_addr
                            : w_trap_base;
-    assign o_mret_taken  = i_is_mret;
+    assign o_mret_taken  = i_is_mret && !r_debug_mode;
     assign o_mret_target = r_mepc;
+    assign o_dret_taken  = i_is_dret && r_debug_mode;
+    assign o_dret_target = r_dpc;
 
     // -----------------------------------------------------------------------
     // CSR read logic
@@ -291,6 +357,12 @@ module k10_csr
             CSR_PMPADDR13:  w_csr_rdata = r_pmpaddr[13];
             CSR_PMPADDR14:  w_csr_rdata = r_pmpaddr[14];
             CSR_PMPADDR15:  w_csr_rdata = r_pmpaddr[15];
+
+            // Debug Mode CSRs (only accessible in debug mode)
+            CSR_DCSR:       w_csr_rdata = w_dcsr;
+            CSR_DPC:        w_csr_rdata = r_dpc;
+            CSR_DSCRATCH0:  w_csr_rdata = r_dscratch0;
+            CSR_DSCRATCH1:  w_csr_rdata = r_dscratch1;
 
             default: begin
                 w_csr_exists = 1'b0;
@@ -368,6 +440,7 @@ module k10_csr
             r_mie_meie       <= 1'b0;
             r_mie_mtie       <= 1'b0;
             r_mie_msie       <= 1'b0;
+            r_mie_fast       <= 15'd0;
             r_mtvec          <= 32'd0;
             r_mcounteren_cy  <= 1'b0;
             r_mcounteren_tm  <= 1'b0;
@@ -378,6 +451,11 @@ module k10_csr
             r_mtval          <= 32'd0;
             r_mcycle         <= 64'd0;
             r_minstret       <= 64'd0;
+            r_debug_mode     <= 1'b0;
+            r_dcsr           <= {4'd4, 16'd0, 12'd0};  // xdebugver=4, prv=M
+            r_dpc            <= 32'd0;
+            r_dscratch0      <= 32'd0;
+            r_dscratch1      <= 32'd0;
             for (int i = 0; i < PMP_REGIONS; i++) begin
                 r_pmpcfg[i]  <= 8'd0;
                 r_pmpaddr[i] <= 32'd0;
@@ -390,8 +468,20 @@ module k10_csr
                 r_minstret <= r_minstret + 64'd1;
             end
 
+            // ---- Debug Mode Entry (highest priority) ----
+            if (w_debug_entry) begin
+                r_debug_mode   <= 1'b1;
+                r_dpc          <= i_exc_pc;
+                r_dcsr[8:6]    <= w_debug_cause;
+                r_dcsr[1:0]    <= r_priv;  // Save current privilege
+
+            // ---- Debug Mode Exit (DRET) ----
+            end else if (o_dret_taken) begin
+                r_debug_mode   <= 1'b0;
+                r_priv         <= priv_lvl_e'(r_dcsr[1:0]);
+
             // ---- Trap Entry ----
-            if (i_exc_valid || w_irq_pending) begin
+            end else if (o_trap_taken) begin
                 // Save state
                 r_mepc         <= i_exc_valid ? i_exc_pc :
                                   i_exc_pc;  // For interrupts, mepc = PC of interrupted instr
@@ -433,6 +523,7 @@ module k10_csr
                         r_mie_meie <= w_csr_wval[11];
                         r_mie_mtie <= w_csr_wval[7];
                         r_mie_msie <= w_csr_wval[3];
+                        r_mie_fast <= w_csr_wval[30:16];
                     end
 
                     CSR_MTVEC: begin
@@ -500,6 +591,18 @@ module k10_csr
                     CSR_PMPADDR13: if (!r_pmpcfg[13][7]) r_pmpaddr[13] <= w_csr_wval;
                     CSR_PMPADDR14: if (!r_pmpcfg[14][7]) r_pmpaddr[14] <= w_csr_wval;
                     CSR_PMPADDR15: if (!r_pmpcfg[15][7]) r_pmpaddr[15] <= w_csr_wval;
+
+                    // Debug CSRs
+                    CSR_DCSR: begin
+                        // Only writable fields: ebreakm[15], step[2], prv[1:0]
+                        r_dcsr[15]  <= w_csr_wval[15];  // ebreakm
+                        r_dcsr[2]   <= w_csr_wval[2];   // step
+                        if (w_csr_wval[1:0] == 2'b11 || w_csr_wval[1:0] == 2'b00)
+                            r_dcsr[1:0] <= w_csr_wval[1:0];  // prv
+                    end
+                    CSR_DPC:       r_dpc       <= {w_csr_wval[31:1], 1'b0};
+                    CSR_DSCRATCH0: r_dscratch0 <= w_csr_wval;
+                    CSR_DSCRATCH1: r_dscratch1 <= w_csr_wval;
 
                     default: ; // Unknown — silently ignore (illegal already flagged)
                 endcase

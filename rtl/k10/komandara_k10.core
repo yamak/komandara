@@ -24,6 +24,8 @@ filesets:
       - k10_tracer.sv:                 {file_type: systemVerilogSource}
       - k10_core.sv:                   {file_type: systemVerilogSource}
       - k10_top.sv:                    {file_type: systemVerilogSource}
+      - periph/k10_timer.sv:           {file_type: systemVerilogSource}
+      - periph/k10_sim_ctrl.sv:        {file_type: systemVerilogSource}
     depend:
       - komandara:ip:common
       - komandara:ip:axi4lite
@@ -78,7 +80,6 @@ targets:
         mode: cc
         verilator_options:
           - -Wall
-          - --trace
+          - --trace-fst
           - -Wno-UNUSEDSIGNAL
           - -Wno-UNDRIVEN
-

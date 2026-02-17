@@ -71,6 +71,9 @@ komandara/
 │   ├── k10_core.sv                  # Core top — instantiates all pipeline stages
 │   ├── k10_top.sv                   # SoC top — core + AXI crossbar + BRAM + periph
 │   ├── komandara_k10.core           # FuseSoC core file
+│   ├── periph/                      # Peripherals
+│   │   ├── k10_timer.sv             # AXI4-Lite Timer (mtime)
+│   │   └── k10_sim_ctrl.sv          # Simulation controller (exit, print)
 │   └── tb/                          # Testbenches
 │       ├── k10_tb.sv                # Verilator testbench (SoC wrapper)
 │       ├── k10_tb.cpp               # Verilator C++ driver
@@ -126,6 +129,8 @@ komandara/
 | **RISC-DV Arithmetic** (`riscv_arithmetic_basic_test`) | Spike trace comparison (random, 200 instr) | ✅ Pass |
 | **Unaligned Memory Access** (19 tests) | Self-checking (LW/LH/LHU/SW/SH at offset +1,+2,+3) | ✅ Pass |
 | **Multiply/Divide** (standalone) | Self-checking (MUL/MULH/DIV/REM/DIVU/REMU, div-by-zero, overflow) | ✅ Pass |
+| **C Self-Test Suite** (`sw/k10/tests`) | Self-checking (Arithmetic, Unaligned, IRQ, Traps) | ✅ Pass |
+| **RISC-DV Regression** (13 tests) | Spike trace comparison (Auto-generated assembly) | ⏳ integrated (Available) |
 | **RISC-DV Load/Store** (`riscv_unaligned_load_store_test`) | Spike trace comparison | 📋 Pending |
 | **CSR Test** (`riscv_csr_test`) | Spike trace comparison | 📋 Pending |
 | **Branch/Jump Stress** | Spike trace comparison | 📋 Pending |

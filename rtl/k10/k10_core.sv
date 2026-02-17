@@ -62,6 +62,10 @@ module k10_core
     input  logic        i_ext_irq,
     input  logic        i_timer_irq,
     input  logic        i_sw_irq,
+    input  logic [14:0] i_irq_fast,
+
+    // ==== Debug ====
+    input  logic        i_debug_req,
 
     // ==== Timer ====
     input  logic [63:0] i_mtime
@@ -111,6 +115,9 @@ module k10_core
     logic [31:0] w_trap_target;
     logic        w_mret_taken;
     logic [31:0] w_mret_target;
+    logic        w_dret_taken;
+    logic [31:0] w_dret_target;
+    logic        w_debug_mode;
 
     // PMP
     logic [PMP_REGIONS-1:0][7:0]  w_pmp_cfg;
@@ -135,8 +142,9 @@ module k10_core
     // =======================================================================
     //  1. FETCH STAGE
     // =======================================================================
-    assign w_pc_set    = w_ex_branch_taken || w_trap_taken || w_mret_taken;
+    assign w_pc_set    = w_ex_branch_taken || w_trap_taken || w_mret_taken || w_dret_taken;
     assign w_pc_target = w_trap_taken ? w_trap_target :
+                         w_dret_taken ? w_dret_target :
                          w_mret_taken ? w_mret_target :
                          w_ex_branch_target;
 
@@ -337,18 +345,26 @@ module k10_core
         .i_exc_tval      (w_exc_tval),
         .i_is_mret       (r_id_ex.valid && r_id_ex.ctrl.is_mret),
         .i_is_wfi        (r_id_ex.valid && r_id_ex.ctrl.is_wfi),
-        .i_ext_irq       (i_ext_irq),
-        .i_timer_irq     (i_timer_irq),
-        .i_sw_irq        (i_sw_irq),
+        .i_is_dret       (r_id_ex.valid && r_id_ex.ctrl.is_dret),
+        .i_ext_irq       (i_ext_irq && r_id_ex.valid),
+        .i_timer_irq     (i_timer_irq && r_id_ex.valid),
+        .i_sw_irq        (i_sw_irq && r_id_ex.valid),
+        .i_irq_fast      (i_irq_fast & {15{r_id_ex.valid}}),
+        .i_debug_req     (i_debug_req),
+        .o_debug_mode    (w_debug_mode),
         .o_trap_taken    (w_trap_taken),
         .o_trap_target   (w_trap_target),
         .o_mret_taken    (w_mret_taken),
         .o_mret_target   (w_mret_target),
+        .o_dret_taken    (w_dret_taken),
+        .o_dret_target   (w_dret_target),
         .i_instr_retired (r_mem_wb.valid),
         .o_pmp_cfg       (w_pmp_cfg),
         .o_pmp_addr      (w_pmp_addr),
         .i_mtime         (i_mtime)
     );
+
+
 
     // Multiply / Divide — uses forwarded operands (critical for data hazards)
     k10_mul_div u_md (
@@ -498,6 +514,7 @@ module k10_core
         .i_branch_taken  (w_ex_branch_taken && r_id_ex.valid),
         .i_trap_taken    (w_trap_taken),
         .i_mret_taken    (w_mret_taken),
+        .i_dret_taken    (w_dret_taken),
         .i_fence_i       (r_if_id.valid && w_id_ctrl.is_fence_i),
 
         // Busy signals

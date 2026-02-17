@@ -116,14 +116,31 @@ module k10_tracer
     // modify a GPR (or CSR).  To match, we skip stores, branches, ECALL,
     // FENCE, and any other instruction that does not write to a register.
     // -----------------------------------------------------------------------
+    /* verilator lint_off BLKSEQ */
+    // Debug: count retired instructions for full tracing
+    integer instr_count;
+    initial instr_count = 0;
+
     always @(posedge i_clk) begin
-        if (i_rst_n && i_valid && i_rd_wr_en && i_rd_addr != 5'd0) begin
-            // Format: pc, instr, gpr, csr, binary, mode, instr_str, operand, pad
-            $fwrite(fd, "%h,,\"%s:%h\",,%h,%0d,,,\n",
-                    i_pc,
-                    abi_name(i_rd_addr), i_rd_data,
-                    i_instr,
-                    (i_mode == PRIV_M) ? 3 : 0);
+        if (i_rst_n && i_valid) begin
+            instr_count = instr_count + 1;
+
+            if (instr_count <= 200) begin
+                // Log ALL retired instructions for first 200
+                if (i_rd_wr_en && i_rd_addr != 5'd0) begin
+                    $fwrite(fd, "%h,,\"%s:%h\",,%h,%0d,,,\n",
+                            i_pc, abi_name(i_rd_addr), i_rd_data,
+                            i_instr, (i_mode == PRIV_M) ? 3 : 0);
+                end else begin
+                    $fwrite(fd, "%h,,,,%h,%0d,,,\n",
+                            i_pc, i_instr, (i_mode == PRIV_M) ? 3 : 0);
+                end
+            end else if (i_rd_wr_en && i_rd_addr != 5'd0) begin
+                // After 200, only log GPR-writing instructions
+                $fwrite(fd, "%h,,\"%s:%h\",,%h,%0d,,,\n",
+                        i_pc, abi_name(i_rd_addr), i_rd_data,
+                        i_instr, (i_mode == PRIV_M) ? 3 : 0);
+            end
         end
     end
 

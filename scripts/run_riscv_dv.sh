@@ -48,6 +48,10 @@ SEED=""
 # Manual mode
 ASM_FILE=""
 
+# Special modes
+RUN_ALL=0
+RUN_APP=0
+
 # BRAM config
 BOOT_ADDR=2147483648  # 0x80000000
 
@@ -55,10 +59,12 @@ BOOT_ADDR=2147483648  # 0x80000000
 # Parse arguments
 # ---------------------------------------------------------------------------
 usage() {
-    echo "Usage: $0 [--test <name>] [--asm <file.S>] [--iterations <N>] [--seed <N>] [--output <dir>]"
+    echo "Usage: $0 [--test <name>] [--asm <file.S>] [--all] [--app] [--iterations <N>] [--seed <N>] [--output <dir>]"
     echo ""
     echo "  --test        RISC-DV test name (default: riscv_arithmetic_basic_test)"
     echo "  --asm         Use a hand-written assembly file instead of RISC-DV"
+    echo "  --all         Run all 13 RISC-DV tests sequentially"
+    echo "  --app         Build and run the C test application (sw/k10/)"
     echo "  --iterations  Number of test iterations (default: 1)"
     echo "  --seed        Random seed for test generation"
     echo "  --output      Output directory (default: build/riscv_dv)"
@@ -69,6 +75,8 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --test)       TEST_NAME="$2";   shift 2 ;;
         --asm)        ASM_FILE="$2";    shift 2 ;;
+        --all)        RUN_ALL=1;        shift ;;
+        --app)        RUN_APP=1;        shift ;;
         --iterations) ITERATIONS="$2";  shift 2 ;;
         --seed)       SEED="$2";        shift 2 ;;
         --output)     OUTPUT_DIR="$2";  shift 2 ;;
@@ -76,6 +84,92 @@ while [[ $# -gt 0 ]]; do
         *)            echo "Unknown option: $1"; usage ;;
     esac
 done
+
+# ---------------------------------------------------------------------------
+# --app mode: Build & run C test suite, then exit
+# ---------------------------------------------------------------------------
+if [[ "${RUN_APP}" -eq 1 ]]; then
+    echo "=== Running C Test Application ==="
+    APP_DIR="${PROJECT_ROOT}/sw/k10"
+    APP_BUILD="${APP_DIR}/build"
+
+    echo "  Building sw/k10 with CMake..."
+    cmake -B "${APP_BUILD}" -S "${APP_DIR}" \
+        -DCMAKE_TOOLCHAIN_FILE="${APP_DIR}/riscv32.cmake" 2>&1
+    cmake --build "${APP_BUILD}" 2>&1
+
+    APP_ELF="${APP_BUILD}/k10_test_suite.elf"
+    APP_HEX="${OUTPUT_DIR}/k10_test_suite.hex"
+    APP_BYTE_HEX="${OUTPUT_DIR}/k10_test_suite_byte.hex"
+    mkdir -p "${OUTPUT_DIR}"
+
+    echo "  Converting ELF → hex..."
+    riscv32-unknown-elf-objcopy --change-addresses=-0x80000000 -O verilog \
+        "${APP_ELF}" "${APP_BYTE_HEX}"
+    python3 "${PROJECT_ROOT}/scripts/verilog_byte2word.py" \
+        "${APP_BYTE_HEX}" "${APP_HEX}"
+
+    echo "  Building Verilator model..."
+    pushd "${PROJECT_ROOT}" > /dev/null
+    fusesoc --cores-root=. run --target=sim --build \
+        komandara:core:k10 \
+        --MEM_INIT="$(realpath "${APP_HEX}")" \
+        --BOOT_ADDR="${BOOT_ADDR}" 2>&1
+    popd > /dev/null
+
+    SIM_DIR="${PROJECT_ROOT}/build/komandara_core_k10_0.1.0/sim-verilator"
+    echo "  Running simulation..."
+    timeout 60 "${SIM_DIR}/Vk10_tb" --trace 2>&1 || true
+
+    if [[ -f "k10_sim.fst" ]]; then
+        cp k10_sim.fst "${OUTPUT_DIR}/k10_sim.fst"
+        echo "  FST Trace: ${OUTPUT_DIR}/k10_sim.fst"
+    fi
+
+    if [[ -f "k10_trace.csv" ]]; then
+        cp k10_trace.csv "${OUTPUT_DIR}/k10_test_suite.csv"
+        echo "  CSV Trace: ${OUTPUT_DIR}/k10_test_suite.csv"
+    fi
+
+    echo "=== C Test Application Complete ==="
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# --all mode: Run all tests from testlist.yaml
+# ---------------------------------------------------------------------------
+if [[ "${RUN_ALL}" -eq 1 ]]; then
+    TESTLIST="${PROJECT_ROOT}/rtl/k10/tb/testlist.yaml"
+    ALL_TESTS=$(grep '^- test:' "${TESTLIST}" | awk '{print $3}')
+
+    PASS_COUNT=0
+    FAIL_COUNT=0
+    FAIL_TESTS=""
+
+    for t in ${ALL_TESTS}; do
+        echo ""
+        echo "====================================================="
+        echo "Running: ${t}"
+        echo "====================================================="
+        if "$0" --test "${t}" --output "${OUTPUT_DIR}/${t}"; then
+            PASS_COUNT=$((PASS_COUNT + 1))
+        else
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+            FAIL_TESTS="${FAIL_TESTS} ${t}"
+        fi
+    done
+
+    echo ""
+    echo "====================================================="
+    echo "=== All Tests Complete ==="
+    echo "  PASSED: ${PASS_COUNT}"
+    echo "  FAILED: ${FAIL_COUNT}"
+    if [[ ${FAIL_COUNT} -gt 0 ]]; then
+        echo "  Failed tests:${FAIL_TESTS}"
+        exit 1
+    fi
+    exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # Environment check
@@ -219,6 +313,10 @@ if [[ -f "k10_trace.csv" ]]; then
 else
     echo "ERROR: k10_trace.csv not generated"
     exit 1
+fi
+
+if [[ -f "k10_sim.fst" ]]; then
+    cp k10_sim.fst "${OUTPUT_DIR}/${TEST_NAME}_k10.fst"
 fi
 
 popd > /dev/null

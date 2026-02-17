@@ -32,6 +32,147 @@
     --no_csr_instr=1
   rtl_test: core_base_test
 
+# Random instruction mix
+- test: riscv_rand_instr_test
+  description: >
+    Random mix of instructions including branches, jumps, loads/stores.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=500
+    --num_of_sub_program=5
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Jump stress test
+- test: riscv_jump_stress_test
+  description: >
+    Stress test for jump instructions (JAL, JALR) with many targets.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=500
+    --num_of_sub_program=20
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Loop test
+- test: riscv_loop_test
+  description: >
+    Nested loop test to exercise branch prediction and pipeline stalls.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=500
+    --num_of_sub_program=5
+    --directed_instr_0=riscv_loop_instr,10
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Random jump test
+- test: riscv_rand_jump_test
+  description: >
+    Random jumps with data hazards to stress forwarding logic.
+  iterations: 1
+  gen_test: riscv_rand_jump_test
+  gen_opts: >
+    --instr_cnt=500
+    --num_of_sub_program=10
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# No fence test
+- test: riscv_no_fence_test
+  description: >
+    Memory operations without fence instructions (test LSU without barriers).
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=500
+    --num_of_sub_program=5
+    --no_fence=1
+    --boot_mode=m
+    --no_csr_instr=1
+  rtl_test: core_base_test
+
+# Illegal instruction test
+- test: riscv_illegal_instr_test
+  description: >
+    Test exception handling for illegal instructions.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --illegal_instr_ratio=20
+    --no_fence=1
+    --boot_mode=m
+  rtl_test: core_base_test
+
+# EBREAK test
+- test: riscv_ebreak_test
+  description: >
+    Test EBREAK exception handling (non-debug mode).
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --no_ebreak=0
+    --no_fence=1
+    --boot_mode=m
+  rtl_test: core_base_test
+
+# EBREAK debug mode test
+- test: riscv_ebreak_debug_mode_test
+  description: >
+    Test EBREAK behavior when debug mode is enabled (dcsr.ebreakm).
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --no_ebreak=0
+    --no_fence=1
+    --boot_mode=m
+    --enable_debug_mode=1
+  rtl_test: core_base_test
+
+# Full interrupt test
+- test: riscv_full_interrupt_test
+  description: >
+    Test interrupt handling with timer and software interrupts.
+  iterations: 1
+  gen_test: riscv_instr_base_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --no_fence=1
+    --boot_mode=m
+    --enable_interrupt=1
+  rtl_test: core_base_test
+
+# CSR test
+- test: riscv_csr_test
+  description: >
+    Test CSR read/write/set/clear operations on implemented CSRs.
+  iterations: 1
+  gen_test: riscv_csr_test
+  gen_opts: >
+    --instr_cnt=200
+    --num_of_sub_program=0
+    --no_fence=1
+    --boot_mode=m
+  rtl_test: core_base_test
+
 # Load/store test with unaligned access enabled
 - test: riscv_unaligned_load_store_test
   description: >
