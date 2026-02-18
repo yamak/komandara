@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BIT_FILE="${1:-@KOMANDARA_BIT_FILE@}"
+
+if ! command -v vivado >/dev/null 2>&1; then
+    echo "ERROR: vivado not found in PATH." >&2
+    echo "Please source Vivado settings first (user responsibility)." >&2
+    exit 1
+fi
+
+if [[ ! -f "${BIT_FILE}" ]]; then
+    echo "ERROR: Bitstream not found: ${BIT_FILE}" >&2
+    exit 1
+fi
+
+vivado -mode batch -source "@KOMANDARA_ROOT@/scripts/vivado_program_fpga.tcl" -tclargs "${BIT_FILE}"

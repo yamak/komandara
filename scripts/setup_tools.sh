@@ -10,9 +10,9 @@
 #   source .venv/bin/activate
 #   ./scripts/setup_tools.sh
 #
-# After setup, add to your shell session:
+# After setup, daily usage is:
 #   source .venv/bin/activate
-#   source scripts/env.sh
+# (scripts/env.sh is auto-sourced by a hook installed into venv activate)
 # =============================================================================
 
 set -euo pipefail
@@ -291,6 +291,11 @@ else
     die "scripts/env.sh not found! It should be part of the repository."
 fi
 
+step "Installing venv activate hook"
+
+"${SCRIPT_DIR}/install_venv_hook.sh"
+ok "venv activate hook installed"
+
 # ---------------------------------------------------------------------------
 # Final Verification Summary
 # ---------------------------------------------------------------------------
@@ -309,5 +314,4 @@ ok "All tools installed successfully!"
 echo ""
 info "To use in a new terminal session:"
 echo "    source .venv/bin/activate"
-echo "    source scripts/env.sh"
 echo ""

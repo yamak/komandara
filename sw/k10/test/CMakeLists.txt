@@ -5,8 +5,6 @@ include(CMakeParseArguments)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-option(K10_REAL_HW_LOGS "Route self-test logs to UART instead of sim_ctrl" OFF)
-
 set(LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../k10_link.ld")
 set(COMMON_FLAGS
     -march=rv32imac_zicsr

@@ -269,17 +269,13 @@ source .venv/bin/activate
 
 # 2. Run the tool setup script (builds Verilator, Spike, downloads toolchain, etc.)
 ./scripts/setup_tools.sh
-
-# 3. Load the environment
-source scripts/env.sh
 ```
 
 ### Daily Workflow
 
 ```bash
-# Activate venv and load tool paths
+# Activate venv (Komandara env is auto-loaded)
 source .venv/bin/activate
-source scripts/env.sh
 
 # Now you can use: verilator, spike, riscv32-unknown-elf-gcc, fusesoc
 ```
@@ -336,14 +332,14 @@ fusesoc --cores-root=. run --target=sim --build komandara:core:k10
 
 ```bash
 # Build bitstream (Vivado must be available)
-source scripts/setenv.sh
+source scripts/vivado_env.sh
 fusesoc --cores-root=. run --target=genesys2_synth --build komandara:core:k10
 
 # Program board (defaults to generated .bit path)
-./scripts/program_genesys2.sh
+./scripts/program_fpga.sh
 
 # Or program an explicit bitstream file
-./scripts/program_genesys2.sh /abs/path/to/k10_genesys2_top.bit
+./scripts/program_fpga.sh /abs/path/to/k10_genesys2_top.bit
 ```
 
 ### Genesys2 Netlist Smoke (Real App)
@@ -352,7 +348,34 @@ fusesoc --cores-root=. run --target=genesys2_synth --build komandara:core:k10
 # Builds a tiny SW app, bakes it into MEM_INIT, then runs:
 #  - post-synthesis functional netlist sim
 #  - post-implementation timing netlist sim
-./scripts/run_genesys2_netlist_smoke.sh
+./scripts/run_fpga_netlist_smoke.sh
+```
+
+### CMake Preset Wrapper (FuseSoC)
+
+```bash
+# Configure Verilator build wrapper (from build/)
+source ../.venv/bin/activate
+/usr/bin/cmake --preset=komandara-sim ../
+
+# Build: auto-build k10_c_selftest, auto-generate MEM_INIT, run FuseSoC sim build
+/usr/bin/cmake --build .
+
+# Verilator executable copied to build dir
+./Vkomandara
+```
+
+```bash
+# Configure Genesys2 synthesis wrapper (from build/)
+source ../.venv/bin/activate
+source ../scripts/vivado_env.sh
+/usr/bin/cmake --preset=komandara-genesys2 ../
+
+# Build: auto-build k10_c_selftest, auto-generate MEM_INIT, run FuseSoC genesys2_synth
+/usr/bin/cmake --build .
+
+# Program script generated in build dir (requires vivado already in PATH)
+./program_fpga.sh
 ```
 
 ---

@@ -39,8 +39,8 @@ riscv32-unknown-elf-objcopy --change-addresses=-0x80000000 -O verilog \
 
 python3 "${REPO_ROOT}/scripts/verilog_byte2word.py" "${BYTE_HEX}" "${WORD_HEX}"
 
-echo "=== [3/5] Build Genesys2 project with smoke app ==="
-source "${REPO_ROOT}/scripts/setenv.sh"
+echo "=== [3/5] Build FPGA project with smoke app ==="
+source "${REPO_ROOT}/scripts/vivado_env.sh"
 
 if ! command -v vivado >/dev/null 2>&1; then
     echo "ERROR: Required tool not found: vivado" >&2

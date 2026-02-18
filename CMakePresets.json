@@ -1,0 +1,32 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "komandara-sim",
+      "displayName": "Komandara Verilator Build",
+      "description": "Wraps FuseSoC sim build and creates build/Vkomandara",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/sw/k10/riscv32.cmake",
+        "KOMANDARA_PRESET": "sim"
+      }
+    },
+    {
+      "name": "komandara-genesys2",
+      "displayName": "Komandara Genesys2 Synthesis",
+      "description": "Wraps FuseSoC Genesys2 synthesis with auto MEM_INIT from selftest",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/sw/k10/riscv32.cmake",
+        "KOMANDARA_PRESET": "genesys2"
+      }
+    }
+  ]
+}

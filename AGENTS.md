@@ -13,12 +13,10 @@ Run once from repo root:
 python3 -m venv .venv
 source .venv/bin/activate
 ./scripts/setup_tools.sh
-source scripts/env.sh
 ```
 Daily shell setup:
 ```bash
 source .venv/bin/activate
-source scripts/env.sh
 ```
 
 ## 3) Build/lint/test commands

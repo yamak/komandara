@@ -21,6 +21,10 @@ export KOMANDARA_ROOT="$(cd "${_KOMANDARA_ENV_DIR}/.." && pwd)"
 export KOMANDARA_TOOLS="${KOMANDARA_ROOT}/tools"
 unset _KOMANDARA_ENV_DIR
 
+if [[ "${KOMANDARA_ENV_LOADED:-0}" == "1" && "${KOMANDARA_ENV_ROOT:-}" == "${KOMANDARA_ROOT}" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
+
 # ---------------------------------------------------------------------------
 # Tool paths (all relative to KOMANDARA_ROOT)
 # ---------------------------------------------------------------------------
@@ -50,3 +54,6 @@ echo "  VERILATOR : $(verilator --version 2>/dev/null || echo 'not found')"
 echo "  SPIKE     : $(spike --help 2>&1 | { head -1 || true; } 2>/dev/null)"
 echo "  RISCV_GCC : $(${RISCV_GCC} --version 2>/dev/null | { head -1 || true; } 2>/dev/null || echo 'not found')"
 echo "  RISCV_DV  : ${RISCV_DV}"
+
+export KOMANDARA_ENV_LOADED=1
+export KOMANDARA_ENV_ROOT="${KOMANDARA_ROOT}"

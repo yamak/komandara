@@ -76,6 +76,16 @@
 // ============================================================================
 
 static inline void k10_putchar(char c) {
+    if (c == '\n') {
+#ifdef K10_REAL_HW
+        while ((UART_STATUS & 0x1U) == 0U) {
+        }
+        UART_TXRX = (uint32_t)'\r';
+#else
+        SIM_CHAR_OUT = (uint32_t)'\r';
+#endif
+    }
+
 #ifdef K10_REAL_HW
     while ((UART_STATUS & 0x1U) == 0U) {
     }
