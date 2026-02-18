@@ -332,6 +332,29 @@ All tools are installed **locally** into the `tools/` directory (gitignored):
 fusesoc --cores-root=. run --target=sim --build komandara:core:k10
 ```
 
+### Genesys2 FPGA Build + Program
+
+```bash
+# Build bitstream (Vivado must be available)
+source scripts/setenv.sh
+fusesoc --cores-root=. run --target=genesys2_synth --build komandara:core:k10
+
+# Program board (defaults to generated .bit path)
+./scripts/program_genesys2.sh
+
+# Or program an explicit bitstream file
+./scripts/program_genesys2.sh /abs/path/to/k10_genesys2_top.bit
+```
+
+### Genesys2 Netlist Smoke (Real App)
+
+```bash
+# Builds a tiny SW app, bakes it into MEM_INIT, then runs:
+#  - post-synthesis functional netlist sim
+#  - post-implementation timing netlist sim
+./scripts/run_genesys2_netlist_smoke.sh
+```
+
 ---
 
 ## Build System

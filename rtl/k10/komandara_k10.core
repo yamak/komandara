@@ -24,11 +24,19 @@ filesets:
       - k10_tracer.sv:                 {file_type: systemVerilogSource}
       - k10_core.sv:                   {file_type: systemVerilogSource}
       - k10_top.sv:                    {file_type: systemVerilogSource}
+      - soc/k10_soc.sv:                {file_type: systemVerilogSource}
       - periph/k10_timer.sv:           {file_type: systemVerilogSource}
       - periph/k10_sim_ctrl.sv:        {file_type: systemVerilogSource}
+      - periph/k10_uart.sv:            {file_type: systemVerilogSource}
     depend:
       - komandara:ip:common
       - komandara:ip:axi4lite
+
+  genesys2:
+    files:
+      - target/clkgen_xil7series_lvds.sv: {file_type: systemVerilogSource}
+      - target/k10_genesys2_top.sv:       {file_type: systemVerilogSource}
+      - target/pins_genesys2.xdc:         {file_type: xdc}
 
   lint:
     files:
@@ -81,5 +89,17 @@ targets:
         verilator_options:
           - -Wall
           - --trace-fst
-          - -Wno-UNUSEDSIGNAL
+          - -Wno-UNUSED
           - -Wno-UNDRIVEN
+
+  genesys2_synth:
+    default_tool: vivado
+    filesets: [rtl, genesys2]
+    toplevel: k10_genesys2_top
+    parameters:
+      - MEM_SIZE_KB
+      - BOOT_ADDR
+      - MEM_INIT
+    tools:
+      vivado:
+        part: xc7k325tffg900-2

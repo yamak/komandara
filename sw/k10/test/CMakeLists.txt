@@ -5,8 +5,19 @@ include(CMakeParseArguments)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+option(K10_REAL_HW_LOGS "Route self-test logs to UART instead of sim_ctrl" OFF)
+
 set(LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../k10_link.ld")
-set(COMMON_FLAGS "-march=rv32imac_zicsr -mabi=ilp32 -Os -g -nostdlib -ffreestanding -fno-builtin -Wall -Wextra")
+set(COMMON_FLAGS
+    -march=rv32imac_zicsr
+    -mabi=ilp32
+    -Os
+    -g
+    -nostdlib
+    -ffreestanding
+    -fno-builtin
+    -Wall
+    -Wextra)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/include")
 
@@ -19,6 +30,9 @@ function(add_k10_manual_target test_name)
 
     if(ARG_TYPE STREQUAL "c")
         add_executable("${target_name}" "${CMAKE_CURRENT_LIST_DIR}/../startup.S" "${ARG_SRC}")
+        if(K10_REAL_HW_LOGS)
+            target_compile_definitions("${target_name}" PRIVATE K10_REAL_HW=1)
+        endif()
     else()
         add_executable("${target_name}" "${ARG_SRC}")
     endif()

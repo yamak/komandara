@@ -15,6 +15,7 @@
 
 #define K10_TIMER_BASE     0x40000000U
 #define K10_SIM_CTRL_BASE  0x40001000U
+#define K10_UART_BASE      0x40002000U
 
 // ============================================================================
 // Timer Registers (k10_timer)
@@ -33,6 +34,16 @@
 #define SIM_CHAR_OUT       (*(volatile uint32_t *)(K10_SIM_CTRL_BASE + 0x04))
 #define SIM_MSIP           (*(volatile uint32_t *)(K10_SIM_CTRL_BASE + 0x08))
 #define SIM_STATUS         (*(volatile uint32_t *)(K10_SIM_CTRL_BASE + 0x0C))
+
+// ============================================================================
+// UART Registers (k10_uart)
+// ============================================================================
+
+#define UART_TXRX          (*(volatile uint32_t *)(K10_UART_BASE + 0x00))
+#define UART_STATUS        (*(volatile uint32_t *)(K10_UART_BASE + 0x04))
+#define UART_CTRL          (*(volatile uint32_t *)(K10_UART_BASE + 0x08))
+#define UART_BAUD_DIV      (*(volatile uint32_t *)(K10_UART_BASE + 0x0C))
+#define UART_IRQ_CLR       (*(volatile uint32_t *)(K10_UART_BASE + 0x10))
 
 // ============================================================================
 // CSR Helpers
@@ -65,7 +76,13 @@
 // ============================================================================
 
 static inline void k10_putchar(char c) {
+#ifdef K10_REAL_HW
+    while ((UART_STATUS & 0x1U) == 0U) {
+    }
+    UART_TXRX = (uint32_t)c;
+#else
     SIM_CHAR_OUT = (uint32_t)c;
+#endif
 }
 
 static inline void k10_puts(const char *s) {
@@ -99,12 +116,24 @@ static inline void k10_put_dec(uint32_t val) {
 
 static inline void sim_pass(void) {
     k10_puts("[PASS]\n");
+#ifdef K10_REAL_HW
+    while (1) {
+        __asm__ volatile ("wfi");
+    }
+#else
     SIM_CTRL = 1;  // Triggers $finish with PASS
+#endif
 }
 
 static inline void sim_fail(void) {
     k10_puts("[FAIL]\n");
+#ifdef K10_REAL_HW
+    while (1) {
+        __asm__ volatile ("wfi");
+    }
+#else
     SIM_CTRL = 0;  // Triggers $finish with FAIL
+#endif
 }
 
 #define TEST_ASSERT(cond, msg) do { \
