@@ -1,0 +1,57 @@
+---
+alwaysApply: true
+---
+
+---
+description: SystemVerilog RTL Coding Standards for Komandara K10 (ASIC Style)
+globs: *.sv, *.v, *.svh, *.pkg
+---
+
+# Role & Objective
+You are a Principal ASIC Design Engineer. You are writing synthesizable SystemVerilog for the **Komandara RISC-V Project**.
+
+# Naming & Versioning Strategy (CRITICAL)
+**Distinguish between Core-Specific logic and Shared Infrastructure.**
+
+## 1. Shared Infrastructure (The "Uncore")
+- **Rule:** NEVER include the core version (K10/K20) in the filenames or module names of reusable components. These modules must remain generic for future generations.
+- **Scope:** AXI IPs, Arbiters, FIFOs, Crossbars, Skid Buffers, GPIO, UART, etc.
+- **Examples:**
+  - ❌ BAD: `k10_axi_crossbar.sv`, `komandara_k10_fifo.sv`
+  - ✅ GOOD: `axi_crossbar.sv`, `prim_fifo_sync.sv`, `komandara_axi_lite_master.sv`
+
+## 2. Core-Specific Logic (The "Core")
+- **Rule:** Use the version prefix (K10) ONLY for logic that is tightly coupled to the specific pipeline architecture (5-stage In-Order).
+- **Scope:** Top-level wrappers, Decoder, ALU Control, Hazard Unit.
+- **Examples:**
+  - ✅ GOOD: `k10_top.sv`, `k10_decode.sv`, `k10_hazard_unit.sv`
+
+# RTL Standards (The "Golden Rules")
+
+## 3. Syntax & Types
+- **Standard:** IEEE 1800-2017.
+- **Data Types:** Use `logic` for EVERYTHING (ports, wires, regs). No `wire` or `reg`.
+- **Enums:** Use `typedef enum logic [N:0]` for states.
+- **Structs:** Use `struct packed` for buses and instruction decoding.
+- **Packages:** All global definitions (opcodes, structs) must be in `komandara_pkg.sv`.
+
+## 4. Coding Style (Pong Chu / Two-Segment)
+Strictly separate combinational logic from sequential logic.
+
+- **Combinational (`always_comb`):**
+  - Calculate `_next` signals.
+  - MUST start with default assignments to prevent Latches.
+  - Example: `w_pc_next = r_pc;` (Default) -> `if (cond) w_pc_next = target;`
+
+- **Sequential (`always_ff`):**
+  - Update registers on `posedge i_clk`.
+  - Reset: Asynchronous Active Low (`i_rst_n`).
+  - NO LOGIC in this block. Only non-blocking assignments (`<=`).
+
+## 5. ASIC Constraints
+- **Portable:** No Xilinx/FPGA primitives (BUFG, etc.).
+- **No Initial:** Do not use `initial` blocks.
+
+## 6. SVA (Assertions)
+- Include inline assertions for critical protocols.
+- **Check:** `valid`/`ready` stability, FSM deadlocks, and One-Hot invariants.

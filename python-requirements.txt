@@ -1,0 +1,24 @@
+# =============================================================================
+# Komandara Python Dependencies
+# =============================================================================
+# Install: pip install -r python-requirements.txt (inside active venv)
+# =============================================================================
+
+# --- FuseSoC Build System ---
+anytree
+hjson
+mako
+pyyaml
+wheel
+cryptography
+packaging
+pyelftools
+
+git+https://github.com/lowRISC/edalize.git@ot
+git+https://github.com/lowRISC/fusesoc.git@ot
+
+# --- RISC-V DV (Random Instruction Generator) ---
+bitstring
+tabulate
+pyvsc
+pandas

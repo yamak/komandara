@@ -1,0 +1,34 @@
+CAPI=2:
+name: komandara:vendor:pulp_riscv_dbg:0.1.0
+description: >
+  Vendored PULP RISC-V debug module RTL (dm_top + JTAG DMI + local prim shims).
+
+filesets:
+  files_src:
+    files:
+      - 3rdParty/pulp_riscv_dbg/prim_assert.sv:            {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_util_pkg.sv:          {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_flop.sv:              {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_count.sv:             {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_cdc_rand_delay.sv:    {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_flop_2sync.sv:        {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_clock_inv.sv:         {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_clock_mux2.sv:        {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_sync_reqack.sv:       {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_fifo_async_simple.sv: {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_fifo_sync_cnt.sv:     {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/prim_fifo_sync.sv:         {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/debug_rom.sv:              {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/debug_rom_one_scratch.sv:  {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dm_pkg.sv:                 {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dm_sba.sv:                 {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dm_csrs.sv:                {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dm_mem.sv:                 {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dmi_cdc.sv:                {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dmi_jtag.sv:               {file_type: systemVerilogSource}
+      - 3rdParty/pulp_riscv_dbg/dm_top.sv:                 {file_type: systemVerilogSource}
+
+targets:
+  default:
+    filesets:
+      - files_src

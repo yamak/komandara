@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+---
+# Build System (FuseSoC)
+Every RTL module must have a corresponding `.core` file (CAPI=2).
+
+- **Naming:** `komandara:<lib>:<name>:<ver>`
+- **Targets:** `default`, `sim` (Verilator), `synth` (Vivado).
+- **Waivers:** If Verilator creates a false-positive warning, add it to `komandara.vlt` referenced in the `.core` file. DO NOT use inline `lint_off`.
+
+# Verification (Verilator & C++)
+- **Verilator:** Use strict linting flags (`-Wall`).
+- **Testbench:** When writing C++ testbenches for Verilator:
+  - Use `m_tick()` function to advance clock.
+  - Ensure `eval()` is called after clock toggles.
+  - Check assertions via `verilated::gotFinish()`.
+
+# RISC-V Verification
+- **Spike:** Use Spike as the Golden Reference Model.
+- **Comparison:** When debugging, compare RTL commit logs with Spike execution logs.
