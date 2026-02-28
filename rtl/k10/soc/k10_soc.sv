@@ -37,13 +37,12 @@ module k10_soc
 
     localparam int MEM_WORDS      = (MEM_SIZE_KB * 1024) / 4;
     localparam int MEM_ADDR_WIDTH = $clog2(MEM_WORDS);
-    localparam int N_MASTERS      = 3;
-    localparam int N_SLAVES       = 5;
-    localparam int SLV_BRAM       = 0;
-    localparam int SLV_TIMER      = 1;
-    localparam int SLV_SIM_CTRL   = 2;
-    localparam int SLV_UART       = 3;
-    localparam int SLV_DM         = 4;
+    localparam int N_MASTERS      = 2; // 0: D-Bus AXI bridge, 1: I-Bus AXI bridge
+    localparam int N_SLAVES       = 4; // BRAM removed from AXI
+    localparam int SLV_TIMER      = 0;
+    localparam int SLV_SIM_CTRL   = 1;
+    localparam int SLV_UART       = 2;
+    localparam int SLV_DM         = 3;
 
     localparam logic [31:0] TIMER_BASE    = PERI_BASE + 32'h0000;
     localparam logic [31:0] TIMER_MASK    = 32'hFFFF_F000;
@@ -193,21 +192,176 @@ module k10_soc
 
     assign w_core_rst_n = i_rst_n && !w_dm_ndmreset;
 
+    logic [1:0]        w_obi_m_req;
+    logic [1:0]        w_obi_m_we;
+    logic [1:0][31:0]  w_obi_m_addr;
+    logic [1:0][31:0]  w_obi_m_wdata;
+    logic [1:0][3:0]   w_obi_m_wstrb;
+    logic [1:0]        w_obi_m_gnt;
+    logic [1:0]        w_obi_m_rvalid;
+    logic [1:0][31:0]  w_obi_m_rdata;
+    logic [1:0]        w_obi_m_err;
+
+    komandara_obi_xbar #(
+        .N_SLAVES       (2),
+        .ADDR_WIDTH     (32),
+        .DATA_WIDTH     (32),
+        .SLAVE_ADDR_BASE({32'h0000_0000, MEM_BASE}), // 1: Default/AXI, 0: BRAM
+        .SLAVE_ADDR_MASK({32'h0000_0000, MEM_MASK})
+    ) u_obi_xbar (
+        .clk_i      (i_clk),
+        .rst_ni     (i_rst_n),
+        .s_req_i    (w_ibus_req),
+        .s_we_i     (1'b0),
+        .s_addr_i   (w_ibus_addr),
+        .s_wdata_i  (32'd0),
+        .s_wstrb_i  (4'd0),
+        .s_gnt_o    (w_ibus_gnt),
+        .s_rvalid_o (w_ibus_rvalid),
+        .s_rdata_o  (w_ibus_rdata),
+        .s_err_o    (w_ibus_err),
+        
+        .m_req_o    (w_obi_m_req),
+        .m_we_o     (w_obi_m_we),
+        .m_addr_o   (w_obi_m_addr),
+        .m_wdata_o  (w_obi_m_wdata),
+        .m_wstrb_o  (w_obi_m_wstrb),
+        .m_gnt_i    (w_obi_m_gnt),
+        .m_rvalid_i (w_obi_m_rvalid),
+        .m_rdata_i  (w_obi_m_rdata),
+        .m_err_i    (w_obi_m_err)
+    );
+
     komandara_bus2axi4lite #(
         .ADDR_WIDTH (32),
         .DATA_WIDTH (32)
     ) u_ibus_adapter (
         .i_clk         (i_clk),
         .i_rst_n       (i_rst_n),
-        .i_req         (w_ibus_req),
-        .i_we          (1'b0),
-        .i_addr        (w_ibus_addr),
-        .i_wdata       (32'd0),
-        .i_wstrb       (4'd0),
-        .o_gnt         (w_ibus_gnt),
-        .o_rvalid      (w_ibus_rvalid),
-        .o_rdata       (w_ibus_rdata),
-        .o_err         (w_ibus_err),
+        .i_req         (w_obi_m_req[1]),
+        .i_we          (w_obi_m_we[1]),
+        .i_addr        (w_obi_m_addr[1]),
+        .i_wdata       (w_obi_m_wdata[1]),
+        .i_wstrb       (w_obi_m_wstrb[1]),
+        .o_gnt         (w_obi_m_gnt[1]),
+        .o_rvalid      (w_obi_m_rvalid[1]),
+        .o_rdata       (w_obi_m_rdata[1]),
+        .o_err         (w_obi_m_err[1]),
+        .m_axi_awaddr  (w_m_awaddr[1]),
+        .m_axi_awprot  (w_m_awprot[1]),
+        .m_axi_awvalid (w_m_awvalid[1]),
+        .m_axi_awready (w_m_awready[1]),
+        .m_axi_wdata   (w_m_wdata[1]),
+        .m_axi_wstrb   (w_m_wstrb[1]),
+        .m_axi_wvalid  (w_m_wvalid[1]),
+        .m_axi_wready  (w_m_wready[1]),
+        .m_axi_bresp   (w_m_bresp[1]),
+        .m_axi_bvalid  (w_m_bvalid[1]),
+        .m_axi_bready  (w_m_bready[1]),
+        .m_axi_araddr  (w_m_araddr[1]),
+        .m_axi_arprot  (w_m_arprot[1]),
+        .m_axi_arvalid (w_m_arvalid[1]),
+        .m_axi_arready (w_m_arready[1]),
+        .m_axi_rdata   (w_m_rdata[1]),
+        .m_axi_rresp   (w_m_rresp[1]),
+        .m_axi_rvalid  (w_m_rvalid[1]),
+        .m_axi_rready  (w_m_rready[1])
+    );
+    
+    logic [1:0]        w_obi_dbus_m_req;
+    logic [1:0]        w_obi_dbus_m_we;
+    logic [1:0][31:0]  w_obi_dbus_m_addr;
+    logic [1:0][31:0]  w_obi_dbus_m_wdata;
+    logic [1:0][3:0]   w_obi_dbus_m_wstrb;
+    logic [1:0]        w_obi_dbus_m_gnt;
+    logic [1:0]        w_obi_dbus_m_rvalid;
+    logic [1:0][31:0]  w_obi_dbus_m_rdata;
+    logic [1:0]        w_obi_dbus_m_err;
+
+    logic        w_muxed_dbus_req;
+    logic        w_muxed_dbus_we;
+    logic [31:0] w_muxed_dbus_addr;
+    logic [31:0] w_muxed_dbus_wdata;
+    logic [3:0]  w_muxed_dbus_wstrb;
+    logic        w_muxed_dbus_gnt;
+    logic        w_muxed_dbus_rvalid;
+    logic [31:0] w_muxed_dbus_rdata;
+    logic        w_muxed_dbus_err;
+
+    komandara_obi_mux #(
+        .N_MASTERS   (2),
+        .ADDR_WIDTH  (32),
+        .DATA_WIDTH  (32),
+        .ROUND_ROBIN (1'b1)
+    ) u_obi_dbus_mux (
+        .clk_i      (i_clk),
+        .rst_ni     (i_rst_n),
+        .s_req_i    ({w_dm_host_req,   w_dbus_req}),
+        .s_we_i     ({w_dm_host_we,    w_dbus_we}),
+        .s_addr_i   ({w_dm_host_addr,  w_dbus_addr}),
+        .s_wdata_i  ({w_dm_host_wdata, w_dbus_wdata}),
+        .s_wstrb_i  ({w_dm_host_be,    w_dbus_wstrb}),
+        .s_gnt_o    ({w_dm_host_gnt,   w_dbus_gnt}),
+        .s_rvalid_o ({w_dm_host_rvalid,w_dbus_rvalid}),
+        .s_rdata_o  ({w_dm_host_rdata, w_dbus_rdata}),
+        .s_err_o    ({w_dm_host_err,   w_dbus_err}),
+        
+        .m_req_o    (w_muxed_dbus_req),
+        .m_we_o     (w_muxed_dbus_we),
+        .m_addr_o   (w_muxed_dbus_addr),
+        .m_wdata_o  (w_muxed_dbus_wdata),
+        .m_wstrb_o  (w_muxed_dbus_wstrb),
+        .m_gnt_i    (w_muxed_dbus_gnt),
+        .m_rvalid_i (w_muxed_dbus_rvalid),
+        .m_rdata_i  (w_muxed_dbus_rdata),
+        .m_err_i    (w_muxed_dbus_err)
+    );
+
+    komandara_obi_xbar #(
+        .N_SLAVES       (2),
+        .ADDR_WIDTH     (32),
+        .DATA_WIDTH     (32),
+        .SLAVE_ADDR_BASE({32'h0000_0000, MEM_BASE}), // 1: Default/AXI, 0: BRAM
+        .SLAVE_ADDR_MASK({32'h0000_0000, MEM_MASK})
+    ) u_obi_dbus_xbar (
+        .clk_i      (i_clk),
+        .rst_ni     (i_rst_n),
+        .s_req_i    (w_muxed_dbus_req),
+        .s_we_i     (w_muxed_dbus_we),
+        .s_addr_i   (w_muxed_dbus_addr),
+        .s_wdata_i  (w_muxed_dbus_wdata),
+        .s_wstrb_i  (w_muxed_dbus_wstrb),
+        .s_gnt_o    (w_muxed_dbus_gnt),
+        .s_rvalid_o (w_muxed_dbus_rvalid),
+        .s_rdata_o  (w_muxed_dbus_rdata),
+        .s_err_o    (w_muxed_dbus_err),
+        
+        .m_req_o    (w_obi_dbus_m_req),
+        .m_we_o     (w_obi_dbus_m_we),
+        .m_addr_o   (w_obi_dbus_m_addr),
+        .m_wdata_o  (w_obi_dbus_m_wdata),
+        .m_wstrb_o  (w_obi_dbus_m_wstrb),
+        .m_gnt_i    (w_obi_dbus_m_gnt),
+        .m_rvalid_i (w_obi_dbus_m_rvalid),
+        .m_rdata_i  (w_obi_dbus_m_rdata),
+        .m_err_i    (w_obi_dbus_m_err)
+    );
+
+    komandara_bus2axi4lite #(
+        .ADDR_WIDTH (32),
+        .DATA_WIDTH (32)
+    ) u_dbus_adapter (
+        .i_clk         (i_clk),
+        .i_rst_n       (i_rst_n),
+        .i_req         (w_obi_dbus_m_req[1]),
+        .i_we          (w_obi_dbus_m_we[1]),
+        .i_addr        (w_obi_dbus_m_addr[1]),
+        .i_wdata       (w_obi_dbus_m_wdata[1]),
+        .i_wstrb       (w_obi_dbus_m_wstrb[1]),
+        .o_gnt         (w_obi_dbus_m_gnt[1]),
+        .o_rvalid      (w_obi_dbus_m_rvalid[1]),
+        .o_rdata       (w_obi_dbus_m_rdata[1]),
+        .o_err         (w_obi_dbus_m_err[1]),
         .m_axi_awaddr  (w_m_awaddr[0]),
         .m_axi_awprot  (w_m_awprot[0]),
         .m_axi_awvalid (w_m_awvalid[0]),
@@ -229,77 +383,7 @@ module k10_soc
         .m_axi_rready  (w_m_rready[0])
     );
 
-    komandara_bus2axi4lite #(
-        .ADDR_WIDTH (32),
-        .DATA_WIDTH (32)
-    ) u_dbus_adapter (
-        .i_clk         (i_clk),
-        .i_rst_n       (i_rst_n),
-        .i_req         (w_dbus_req),
-        .i_we          (w_dbus_we),
-        .i_addr        (w_dbus_addr),
-        .i_wdata       (w_dbus_wdata),
-        .i_wstrb       (w_dbus_wstrb),
-        .o_gnt         (w_dbus_gnt),
-        .o_rvalid      (w_dbus_rvalid),
-        .o_rdata       (w_dbus_rdata),
-        .o_err         (w_dbus_err),
-        .m_axi_awaddr  (w_m_awaddr[1]),
-        .m_axi_awprot  (w_m_awprot[1]),
-        .m_axi_awvalid (w_m_awvalid[1]),
-        .m_axi_awready (w_m_awready[1]),
-        .m_axi_wdata   (w_m_wdata[1]),
-        .m_axi_wstrb   (w_m_wstrb[1]),
-        .m_axi_wvalid  (w_m_wvalid[1]),
-        .m_axi_wready  (w_m_wready[1]),
-        .m_axi_bresp   (w_m_bresp[1]),
-        .m_axi_bvalid  (w_m_bvalid[1]),
-        .m_axi_bready  (w_m_bready[1]),
-        .m_axi_araddr  (w_m_araddr[1]),
-        .m_axi_arprot  (w_m_arprot[1]),
-        .m_axi_arvalid (w_m_arvalid[1]),
-        .m_axi_arready (w_m_arready[1]),
-        .m_axi_rdata   (w_m_rdata[1]),
-        .m_axi_rresp   (w_m_rresp[1]),
-        .m_axi_rvalid  (w_m_rvalid[1]),
-        .m_axi_rready  (w_m_rready[1])
-    );
 
-    komandara_bus2axi4lite #(
-        .ADDR_WIDTH (32),
-        .DATA_WIDTH (32)
-    ) u_dm_host_adapter (
-        .i_clk         (i_clk),
-        .i_rst_n       (i_rst_n),
-        .i_req         (w_dm_host_req),
-        .i_we          (w_dm_host_we),
-        .i_addr        (w_dm_host_addr),
-        .i_wdata       (w_dm_host_wdata),
-        .i_wstrb       (w_dm_host_be),
-        .o_gnt         (w_dm_host_gnt),
-        .o_rvalid      (w_dm_host_rvalid),
-        .o_rdata       (w_dm_host_rdata),
-        .o_err         (w_dm_host_err),
-        .m_axi_awaddr  (w_m_awaddr[2]),
-        .m_axi_awprot  (w_m_awprot[2]),
-        .m_axi_awvalid (w_m_awvalid[2]),
-        .m_axi_awready (w_m_awready[2]),
-        .m_axi_wdata   (w_m_wdata[2]),
-        .m_axi_wstrb   (w_m_wstrb[2]),
-        .m_axi_wvalid  (w_m_wvalid[2]),
-        .m_axi_wready  (w_m_wready[2]),
-        .m_axi_bresp   (w_m_bresp[2]),
-        .m_axi_bvalid  (w_m_bvalid[2]),
-        .m_axi_bready  (w_m_bready[2]),
-        .m_axi_araddr  (w_m_araddr[2]),
-        .m_axi_arprot  (w_m_arprot[2]),
-        .m_axi_arvalid (w_m_arvalid[2]),
-        .m_axi_arready (w_m_arready[2]),
-        .m_axi_rdata   (w_m_rdata[2]),
-        .m_axi_rresp   (w_m_rresp[2]),
-        .m_axi_rvalid  (w_m_rvalid[2]),
-        .m_axi_rready  (w_m_rready[2])
-    );
 
     genvar m;
     generate
@@ -332,8 +416,8 @@ module k10_soc
         .ADDR_WIDTH      (32),
         .DATA_WIDTH      (32),
         .ROUND_ROBIN     (1'b0),
-        .SLAVE_ADDR_BASE ({DM_BASE, UART_BASE, SIM_CTRL_BASE, TIMER_BASE, MEM_BASE}),
-        .SLAVE_ADDR_MASK ({DM_MASK, UART_MASK, SIM_CTRL_MASK, TIMER_MASK, MEM_MASK})
+        .SLAVE_ADDR_BASE ({DM_BASE, UART_BASE, SIM_CTRL_BASE, TIMER_BASE}),
+        .SLAVE_ADDR_MASK ({DM_MASK, UART_MASK, SIM_CTRL_MASK, TIMER_MASK})
     ) u_xbar (
         .clk_i           (i_clk),
         .rst_ni          (i_rst_n),
@@ -377,33 +461,41 @@ module k10_soc
         .m_axi_rready_o  (w_xbar_m_rready)
     );
 
-    komandara_bram_axi4lite #(
-        .MEM_ADDR_WIDTH (MEM_ADDR_WIDTH),
-        .AXI_ADDR_WIDTH (32),
-        .AXI_DATA_WIDTH (32),
-        .INIT_FILE      (MEM_INIT)
+    logic [MEM_ADDR_WIDTH-1:0] w_bram_addr_a;
+    logic [MEM_ADDR_WIDTH-1:0] w_bram_addr_b;
+    assign w_bram_addr_a = w_obi_m_addr[0][MEM_ADDR_WIDTH+1:2];
+    assign w_bram_addr_b = w_obi_dbus_m_addr[0][MEM_ADDR_WIDTH+1:2];
+
+    assign w_obi_m_gnt[0] = w_obi_m_req[0]; // BRAM responds in 1 cycle
+    assign w_obi_m_err[0] = 1'b0;
+    
+    assign w_obi_dbus_m_gnt[0] = w_obi_dbus_m_req[0]; // BRAM responds in 1 cycle
+    assign w_obi_dbus_m_err[0] = 1'b0;
+
+    komandara_bram #(
+        .ADDR_WIDTH (MEM_ADDR_WIDTH),
+        .DATA_WIDTH (32),
+        .INIT_FILE  (MEM_INIT)
     ) u_bram (
         .i_clk         (i_clk),
-        .i_rst_n       (i_rst_n),
-        .s_axi_awaddr  (w_xbar_m_awaddr[0]),
-        .s_axi_awprot  (w_xbar_m_awprot[0]),
-        .s_axi_awvalid (w_xbar_m_awvalid[0]),
-        .s_axi_awready (w_xbar_m_awready[0]),
-        .s_axi_wdata   (w_xbar_m_wdata[0]),
-        .s_axi_wstrb   (w_xbar_m_wstrb[0]),
-        .s_axi_wvalid  (w_xbar_m_wvalid[0]),
-        .s_axi_wready  (w_xbar_m_wready[0]),
-        .s_axi_bresp   (w_xbar_m_bresp[0]),
-        .s_axi_bvalid  (w_xbar_m_bvalid[0]),
-        .s_axi_bready  (w_xbar_m_bready[0]),
-        .s_axi_araddr  (w_xbar_m_araddr[0]),
-        .s_axi_arprot  (w_xbar_m_arprot[0]),
-        .s_axi_arvalid (w_xbar_m_arvalid[0]),
-        .s_axi_arready (w_xbar_m_arready[0]),
-        .s_axi_rdata   (w_xbar_m_rdata[0]),
-        .s_axi_rresp   (w_xbar_m_rresp[0]),
-        .s_axi_rvalid  (w_xbar_m_rvalid[0]),
-        .s_axi_rready  (w_xbar_m_rready[0])
+        
+        // Native / OBI Port A (Instruction Fetch) -> OBI XBAR 1 Slave 0
+        .i_req_a       (w_obi_m_req[0]),
+        .i_we_a        (w_obi_m_we[0]),          
+        .i_addr_a      (w_bram_addr_a),
+        .i_wdata_a     (w_obi_m_wdata[0]),
+        .i_wstrb_a     (w_obi_m_wstrb[0]),
+        .o_rvalid_a    (w_obi_m_rvalid[0]),
+        .o_rdata_a     (w_obi_m_rdata[0]),
+        
+        // Native / OBI Port B (Data Bus + SBA) -> OBI XBAR 2 Slave 0
+        .i_req_b       (w_obi_dbus_m_req[0]),
+        .i_we_b        (w_obi_dbus_m_we[0]),          
+        .i_addr_b      (w_bram_addr_b),
+        .i_wdata_b     (w_obi_dbus_m_wdata[0]),
+        .i_wstrb_b     (w_obi_dbus_m_wstrb[0]),
+        .o_rvalid_b    (w_obi_dbus_m_rvalid[0]),
+        .o_rdata_b     (w_obi_dbus_m_rdata[0])
     );
 
     logic        r_dm_aw_pending;

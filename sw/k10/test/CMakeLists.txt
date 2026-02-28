@@ -51,10 +51,13 @@ function(add_k10_manual_target test_name)
         COMMAND "${CMAKE_OBJCOPY}" -O binary
                 "$<TARGET_FILE:${target_name}>"
                 "${CMAKE_BINARY_DIR}/${test_name}.bin"
+        COMMAND "${CMAKE_OBJCOPY}" -O ihex
+                "$<TARGET_FILE:${target_name}>"
+                "${CMAKE_BINARY_DIR}/${test_name}.hex"
         COMMAND "${CMAKE_OBJDUMP}" -d -S
                 "$<TARGET_FILE:${target_name}>"
                 > "${CMAKE_BINARY_DIR}/${test_name}.dis"
-        COMMENT "Generated ${test_name}.elf/.bin/.dis")
+        COMMENT "Generated ${test_name}.elf/.bin/.hex/.dis")
 endfunction()
 
 file(GLOB ASM_TESTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/*.S")

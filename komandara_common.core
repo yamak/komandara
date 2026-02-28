@@ -11,6 +11,8 @@ filesets:
       - rtl/ip/common/rtl/komandara_bram.sv:           {file_type: systemVerilogSource}
       - rtl/ip/common/rtl/komandara_bram_axi4lite.sv:  {file_type: systemVerilogSource}
       - rtl/ip/common/rtl/komandara_bus2axi4lite.sv:   {file_type: systemVerilogSource}
+      - rtl/ip/common/rtl/komandara_obi_xbar.sv:       {file_type: systemVerilogSource}
+      - rtl/ip/common/rtl/komandara_obi_mux.sv:        {file_type: systemVerilogSource}
 
 targets:
   default:

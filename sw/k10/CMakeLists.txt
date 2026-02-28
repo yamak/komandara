@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(k10_software C ASM)
 
-option(K10_REAL_HW_LOGS "Route self-test logs to UART instead of sim_ctrl" OFF)
+option(K10_REAL_HW_LOGS "Route self-test logs to UART instead of sim_ctrl" ON)
 
 if(NOT DEFINED K10_MEMINIT_APP)
     set(K10_MEMINIT_APP "k10_c_selftest")

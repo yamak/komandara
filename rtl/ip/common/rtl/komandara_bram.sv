@@ -37,23 +37,34 @@ module komandara_bram #(
 )(
     input  logic                         i_clk,
 
-    // Request
-    input  logic                         i_req,
-    input  logic                         i_we,
-    input  logic [ADDR_WIDTH-1:0]        i_addr,     // Word address
-    input  logic [DATA_WIDTH-1:0]        i_wdata,
-    input  logic [(DATA_WIDTH/8)-1:0]    i_wstrb,
+    // Port A Request
+    input  logic                         i_req_a,
+    input  logic                         i_we_a,
+    input  logic [ADDR_WIDTH-1:0]        i_addr_a,     // Word address
+    input  logic [DATA_WIDTH-1:0]        i_wdata_a,
+    input  logic [(DATA_WIDTH/8)-1:0]    i_wstrb_a,
 
-    // Response  (1-cycle latency for reads)
-    output logic                         o_rvalid,
-    output logic [DATA_WIDTH-1:0]        o_rdata
+    // Port A Response  (1-cycle latency for reads)
+    output logic                         o_rvalid_a,
+    output logic [DATA_WIDTH-1:0]        o_rdata_a,
+
+    // Port B Request
+    input  logic                         i_req_b,
+    input  logic                         i_we_b,
+    input  logic [ADDR_WIDTH-1:0]        i_addr_b,     // Word address
+    input  logic [DATA_WIDTH-1:0]        i_wdata_b,
+    input  logic [(DATA_WIDTH/8)-1:0]    i_wstrb_b,
+
+    // Port B Response  (1-cycle latency for reads)
+    output logic                         o_rvalid_b,
+    output logic [DATA_WIDTH-1:0]        o_rdata_b
 );
 
     localparam int DEPTH = 2**ADDR_WIDTH;
     localparam int BYTES = DATA_WIDTH / 8;
 
     // -----------------------------------------------------------------------
-    // Memory array  — written to infer BRAM
+    // Memory array  — written to infer True Dual-Port BRAM
     // -----------------------------------------------------------------------
     (* ram_style = "block" *)   // Xilinx synthesis attribute
     logic [DATA_WIDTH-1:0] r_mem [0:DEPTH-1];
@@ -84,31 +95,51 @@ module komandara_bram #(
     end
 
     // -----------------------------------------------------------------------
-    // Read data register  (synchronous read → infers BRAM output register)
+    // Read data registers  (synchronous read → infers BRAM output register)
     // -----------------------------------------------------------------------
-    logic [DATA_WIDTH-1:0] r_rdata;
-    logic                  r_rvalid;
+    logic [DATA_WIDTH-1:0] r_rdata_a, r_rdata_b;
+    logic                  r_rvalid_a, r_rvalid_b;
 
+    // Port A
     always_ff @(posedge i_clk) begin
-        r_rvalid <= 1'b0;
+        r_rvalid_a <= 1'b0;
 
-        if (i_req) begin
-            if (i_we) begin
+        if (i_req_a) begin
+            if (i_we_a) begin
                 // Byte-granular write
                 for (int b = 0; b < BYTES; b++) begin
-                    if (i_wstrb[b]) begin
-                        r_mem[i_addr][b*8 +: 8] <= i_wdata[b*8 +: 8];
+                    if (i_wstrb_a[b]) begin
+                        r_mem[i_addr_a][b*8 +: 8] <= i_wdata_a[b*8 +: 8];
                     end
                 end
             end
-
-            // Read (even on write — read-first behaviour)
-            r_rdata  <= r_mem[i_addr];
-            r_rvalid <= 1'b1;
+            r_rdata_a  <= r_mem[i_addr_a];
+            r_rvalid_a <= 1'b1;
         end
     end
 
-    assign o_rdata  = r_rdata;
-    assign o_rvalid = r_rvalid;
+    // Port B
+    always_ff @(posedge i_clk) begin
+        r_rvalid_b <= 1'b0;
+
+        if (i_req_b) begin
+            if (i_we_b) begin
+                // Byte-granular write
+                for (int b = 0; b < BYTES; b++) begin
+                    if (i_wstrb_b[b]) begin
+                        r_mem[i_addr_b][b*8 +: 8] <= i_wdata_b[b*8 +: 8];
+                    end
+                end
+            end
+            r_rdata_b  <= r_mem[i_addr_b];
+            r_rvalid_b <= 1'b1;
+        end
+    end
+
+    assign o_rdata_a  = r_rdata_a;
+    assign o_rvalid_a = r_rvalid_a;
+
+    assign o_rdata_b  = r_rdata_b;
+    assign o_rvalid_b = r_rvalid_b;
 
 endmodule : komandara_bram
